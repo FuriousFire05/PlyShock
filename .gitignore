@@ -4,6 +4,9 @@ reports/
 # Python environment
 .venv/
 
+# VSCode settings
+.vscode/
+
 # Python cache
 __pycache__/
 *.pyc
@@ -50,4 +53,4 @@ build/
 
 # OS
 Thumbs.db
-.DS_Store
+.DS_Store.vscode/
