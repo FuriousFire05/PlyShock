@@ -22,11 +22,21 @@ research/data/processed/*
 !research/data/interim/.gitkeep
 !research/data/processed/.gitkeep
 
-# Artifacts
+# Keep small sample data trackable
+# research/data/samples/ is intentionally not ignored
+
+# Heavy model artifacts
 research/artifacts/models/*
-research/artifacts/live_logs/*
 !research/artifacts/models/.gitkeep
+
+# Live logs
+research/artifacts/live_logs/*
 !research/artifacts/live_logs/.gitkeep
+
+# Keep metrics/plots/reports trackable if small
+# research/artifacts/metrics/
+# research/artifacts/plots/
+# research/artifacts/reports/
 
 # Frontend
 node_modules/
