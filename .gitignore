@@ -1,0 +1,43 @@
+# Private/submission files
+reports/
+
+# Python environment
+.venv/
+
+# Python cache
+__pycache__/
+*.pyc
+*.pyo
+.pytest_cache/
+.ruff_cache/
+
+# Jupyter
+.ipynb_checkpoints/
+
+# Data
+research/data/raw/*
+research/data/interim/*
+research/data/processed/*
+!research/data/raw/.gitkeep
+!research/data/interim/.gitkeep
+!research/data/processed/.gitkeep
+
+# Artifacts
+research/artifacts/models/*
+research/artifacts/live_logs/*
+!research/artifacts/models/.gitkeep
+!research/artifacts/live_logs/.gitkeep
+
+# Frontend
+node_modules/
+.next/
+dist/
+build/
+
+# Environment secrets
+.env
+.env.local
+
+# OS
+Thumbs.db
+.DS_Store
