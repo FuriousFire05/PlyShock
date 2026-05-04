@@ -1,0 +1,25 @@
+{
+  "total_games": 1216,
+  "upset_count": 417,
+  "non_upset_count": 799,
+  "upset_rate": 0.34292763157894735,
+  "rating_gap_min": 100,
+  "rating_gap_max": 1257,
+  "rating_gap_mean": 222.29358552631578,
+  "final_fullmove_min": 15,
+  "final_fullmove_max": 139,
+  "final_fullmove_mean": 35.311677631578945,
+  "rating_gap_bucket_counts": {
+    "0-99": 0,
+    "100-199": 835,
+    "200-399": 227,
+    "400-799": 124,
+    "800+": 30
+  },
+  "upset_rate_by_rating_gap_bucket": {
+    "100-199": 0.3916167664670659,
+    "200-399": 0.2775330396475771,
+    "400-799": 0.1935483870967742,
+    "800+": 0.1
+  }
+}
