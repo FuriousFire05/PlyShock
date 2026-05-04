@@ -54,3 +54,6 @@ build/
 # OS
 Thumbs.db
 .DS_Store.vscode/
+
+# Local tools / binaries
+research/tools/
