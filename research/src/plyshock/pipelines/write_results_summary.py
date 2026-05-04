@@ -14,6 +14,7 @@ def write_results_summary(
     model_comparison_path: str | Path,
     eda_summary_path: str | Path,
     output_path: str | Path,
+    feature_summary_path: str | Path | None = None,
 ) -> str:
     """Create and write a Markdown results summary.
 
@@ -21,13 +22,15 @@ def write_results_summary(
         model_comparison_path: Path to ``model_comparison.json``.
         eda_summary_path: Path to EDA summary JSON.
         output_path: Destination Markdown path.
+        feature_summary_path: Optional path to feature summary JSON.
 
     Returns:
         The Markdown content written to ``output_path``.
     """
     model_summary = _read_json(model_comparison_path)
     eda_summary = _read_json(eda_summary_path)
-    content = _build_markdown_summary(model_summary, eda_summary)
+    feature_summary = _read_json(feature_summary_path) if feature_summary_path is not None else None
+    content = _build_markdown_summary(model_summary, eda_summary, feature_summary)
 
     destination = Path(output_path)
     destination.parent.mkdir(parents=True, exist_ok=True)
@@ -40,6 +43,9 @@ def main(argv: Sequence[str] | None = None) -> None:
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--models-json", required=True, type=Path, help="Model comparison JSON.")
     parser.add_argument("--eda-json", required=True, type=Path, help="EDA summary JSON.")
+    parser.add_argument(
+        "--feature-summary", default=None, type=Path, help="Optional feature summary JSON."
+    )
     parser.add_argument("--output", required=True, type=Path, help="Output Markdown path.")
     args = parser.parse_args(argv)
 
@@ -47,11 +53,14 @@ def main(argv: Sequence[str] | None = None) -> None:
         model_comparison_path=args.models_json,
         eda_summary_path=args.eda_json,
         output_path=args.output,
+        feature_summary_path=args.feature_summary,
     )
 
 
 def _build_markdown_summary(
-    model_summary: dict[str, object], eda_summary: dict[str, object]
+    model_summary: dict[str, object],
+    eda_summary: dict[str, object],
+    feature_summary: dict[str, object] | None,
 ) -> str:
     models = _models_dict(model_summary)
     best_by_f1 = _best_model_by_metric(models, "f1")
@@ -64,23 +73,31 @@ def _build_markdown_summary(
         [
             "# PlyShock Results Summary",
             "",
-            "## Dataset Summary",
-            f"- Total model rows: {model_summary.get('total_rows', 'n/a')}",
-            f"- Train rows: {model_summary.get('train_rows', 'n/a')}",
-            f"- Test rows: {model_summary.get('test_rows', 'n/a')}",
-            f"- Train games: {model_summary.get('train_games', 'n/a')}",
-            f"- Test games: {model_summary.get('test_games', 'n/a')}",
-            f"- Feature count: {model_summary.get('feature_count', 'n/a')}",
-            f"- Upset count: {eda_summary.get('upset_count', 'n/a')}",
-            f"- Non-upset count: {eda_summary.get('non_upset_count', 'n/a')}",
-            f"- Upset rate: {_format_metric(eda_summary.get('upset_rate'))}",
-            "",
-            "## Preprocessing and EDA Highlights",
+            "## Filtered Game Dataset / EDA Summary",
+            f"- Filtered game count: {eda_summary.get('total_games', 'n/a')}",
+            f"- Filtered game upset count: {eda_summary.get('upset_count', 'n/a')}",
+            f"- Filtered game non-upset count: {eda_summary.get('non_upset_count', 'n/a')}",
+            f"- Filtered game upset rate: {_format_metric(eda_summary.get('upset_rate'))}",
             f"- Rating gap min: {eda_summary.get('rating_gap_min', 'n/a')}",
             f"- Rating gap max: {eda_summary.get('rating_gap_max', 'n/a')}",
             f"- Rating gap mean: {_format_metric(eda_summary.get('rating_gap_mean'))}",
             "- Rating gap bucket upset rates:",
             bucket_rates,
+            "",
+            "## Snapshot Model Dataset Summary",
+            *_feature_summary_lines(feature_summary),
+            f"- Model snapshot row count: {model_summary.get('total_rows', 'n/a')}",
+            f"- Model train rows: {model_summary.get('train_rows', 'n/a')}",
+            f"- Model test rows: {model_summary.get('test_rows', 'n/a')}",
+            f"- Model train games: {model_summary.get('train_games', 'n/a')}",
+            f"- Model test games: {model_summary.get('test_games', 'n/a')}",
+            f"- Model feature count: {model_summary.get('feature_count', 'n/a')}",
+            "",
+            "## Preprocessing and EDA Highlights",
+            "- The EDA counts above describe filtered games, while the model rows describe "
+            "mid-game snapshot rows derived from those games.",
+            "- Snapshot-level class counts can differ from game-level counts because one game may "
+            "produce multiple snapshots.",
             "",
             "## Model Training Setup",
             "- Models were trained on schema-declared model input features only.",
@@ -138,6 +155,32 @@ def _rating_gap_bucket_rates(eda_summary: dict[str, object]) -> str:
         return "  - n/a"
     return "\n".join(
         f"  - {bucket}: {_format_metric(rate)}" for bucket, rate in sorted(rates.items())
+    )
+
+
+def _feature_summary_lines(feature_summary: dict[str, object] | None) -> list[str]:
+    if feature_summary is None:
+        return ["- Feature summary JSON: not provided"]
+
+    return [
+        f"- Feature pipeline input snapshot rows: {feature_summary.get('total_input_rows', 'n/a')}",
+        "- Feature pipeline output snapshot rows: "
+        f"{feature_summary.get('total_output_rows', 'n/a')}",
+        "- Snapshot rows dropped for missing eval: "
+        f"{feature_summary.get('dropped_missing_eval_rows', 'n/a')}",
+        f"- Snapshot upset row count: {feature_summary.get('upset_count', 'n/a')}",
+        f"- Snapshot non-upset row count: {feature_summary.get('non_upset_count', 'n/a')}",
+        "- Snapshot counts by move:",
+        _snapshot_counts_by_move(feature_summary),
+    ]
+
+
+def _snapshot_counts_by_move(feature_summary: dict[str, object]) -> str:
+    counts = feature_summary.get("snapshot_counts_by_move", {})
+    if not isinstance(counts, dict) or not counts:
+        return "  - n/a"
+    return "\n".join(
+        f"  - {snapshot_move}: {count}" for snapshot_move, count in sorted(counts.items())
     )
 
 
