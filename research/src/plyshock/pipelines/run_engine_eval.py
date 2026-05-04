@@ -17,7 +17,7 @@ from plyshock.engine.eval_cache import (
     merge_missing_evals,
     save_eval_cache,
 )
-from plyshock.engine.stockfish_client import evaluate_fen
+from plyshock.engine.stockfish_client import evaluate_fens
 
 
 def run_engine_eval(
@@ -61,12 +61,15 @@ def run_engine_eval(
     print(f"Evaluating {len(fens_to_evaluate)} FENs at depth {depth}.")
 
     new_records: list[dict[str, object]] = []
-    for index, fen in enumerate(fens_to_evaluate, start=1):
-        evaluation = evaluate_fen(engine_file, fen, depth=depth)
+    evaluations = (
+        evaluate_fens(engine_file, fens_to_evaluate, depth=depth) if fens_to_evaluate else []
+    )
+    for index, evaluation in enumerate(evaluations, start=1):
         record = asdict(evaluation)
-        record["fen_hash"] = fen_hash(fen)
+        record["fen_hash"] = fen_hash(evaluation.fen)
         new_records.append(record)
-        print(f"Evaluated {index}/{len(fens_to_evaluate)}")
+        if index % 100 == 0 or index == len(evaluations):
+            print(f"Prepared {index}/{len(evaluations)} new cache records.")
 
     updated_cache = _updated_cache(cache, new_records)
     save_eval_cache(updated_cache, cache_file)

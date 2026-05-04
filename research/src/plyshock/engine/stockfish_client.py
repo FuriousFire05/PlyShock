@@ -59,21 +59,43 @@ def evaluate_fen(engine_path: str | Path, fen: str, depth: int = 8) -> EngineEva
     Returns:
         Normalized engine evaluation.
     """
-    board = chess.Board(fen)
+    return evaluate_fens(engine_path, [fen], depth=depth)[0]
+
+
+def evaluate_fens(
+    engine_path: str | Path, fens: list[str], depth: int = 8
+) -> list[EngineEvaluation]:
+    """Evaluate multiple FENs with a single Stockfish process.
+
+    Args:
+        engine_path: Path to the Stockfish executable.
+        fens: FEN positions to evaluate.
+        depth: Search depth for the analysis limit.
+
+    Returns:
+        Normalized engine evaluations in the same order as ``fens``.
+    """
     engine = chess.engine.SimpleEngine.popen_uci(str(Path(engine_path)))
     try:
-        info = engine.analyse(board, chess.engine.Limit(depth=depth))
-        score = info.get("score")
-        if score is None:
-            raise ValueError(f"Engine returned no score for FEN {fen!r}.")
+        evaluations: list[EngineEvaluation] = []
+        for fen in fens:
+            board = chess.Board(fen)
+            info = engine.analyse(board, chess.engine.Limit(depth=depth))
+            score = info.get("score")
+            if score is None:
+                raise ValueError(f"Engine returned no score for FEN {fen!r}.")
 
-        eval_cp, mate_flag = score_to_cp(score)
-        return EngineEvaluation(
-            fen=fen,
-            eval_cp_white_pov=eval_cp,
-            eval_cp_clipped=eval_cp,
-            mate_flag=mate_flag,
-            depth=depth,
-        )
+            eval_cp, mate_flag = score_to_cp(score)
+            evaluations.append(
+                EngineEvaluation(
+                    fen=fen,
+                    eval_cp_white_pov=eval_cp,
+                    eval_cp_clipped=eval_cp,
+                    mate_flag=mate_flag,
+                    depth=depth,
+                )
+            )
+
+        return evaluations
     finally:
         engine.quit()
