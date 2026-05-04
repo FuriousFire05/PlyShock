@@ -1,0 +1,127 @@
+{
+  "total_rows": 24563,
+  "train_rows": 19648,
+  "test_rows": 4915,
+  "train_games": 5229,
+  "test_games": 1308,
+  "target_column": "upset_label",
+  "feature_sets": {
+    "rating_only": [
+      "rating_gap",
+      "lower_is_white"
+    ],
+    "rating_clock": [
+      "rating_gap",
+      "lower_is_white",
+      "snapshot_move",
+      "initial_time_sec",
+      "increment_sec",
+      "lower_clock_sec",
+      "higher_clock_sec",
+      "clock_diff_lower_minus_higher",
+      "lower_clock_ratio",
+      "higher_clock_ratio",
+      "lower_time_pressure_flag",
+      "higher_time_pressure_flag"
+    ],
+    "rating_engine": [
+      "rating_gap",
+      "lower_is_white",
+      "snapshot_move",
+      "eval_cp_lower_pov",
+      "eval_abs",
+      "lower_is_better_by_engine",
+      "mate_flag"
+    ],
+    "rating_clock_engine": [
+      "rating_gap",
+      "lower_is_white",
+      "snapshot_move",
+      "initial_time_sec",
+      "increment_sec",
+      "lower_clock_sec",
+      "higher_clock_sec",
+      "clock_diff_lower_minus_higher",
+      "lower_clock_ratio",
+      "higher_clock_ratio",
+      "lower_time_pressure_flag",
+      "higher_time_pressure_flag",
+      "eval_cp_lower_pov",
+      "eval_abs",
+      "lower_is_better_by_engine",
+      "mate_flag"
+    ],
+    "full_plyshock": [
+      "rating_gap",
+      "lower_is_white",
+      "snapshot_move",
+      "snapshot_ply",
+      "initial_time_sec",
+      "increment_sec",
+      "lower_clock_sec",
+      "higher_clock_sec",
+      "clock_diff_lower_minus_higher",
+      "lower_clock_ratio",
+      "higher_clock_ratio",
+      "lower_time_pressure_flag",
+      "higher_time_pressure_flag",
+      "eval_cp_white_pov",
+      "eval_cp_clipped",
+      "eval_cp_lower_pov",
+      "eval_abs",
+      "lower_is_better_by_engine",
+      "mate_flag",
+      "eval_delta_from_prev_snapshot",
+      "eval_trend_from_first_snapshot",
+      "eval_volatility_so_far",
+      "large_eval_swing_flag",
+      "rating_gap_x_eval_lower_pov",
+      "higher_time_pressure_x_eval_volatility",
+      "lower_worse_but_higher_under_pressure"
+    ]
+  },
+  "results": {
+    "majority_baseline": {
+      "accuracy": 0.6734486266531028,
+      "precision": 0.0,
+      "recall": 0.0,
+      "f1": 0.0,
+      "roc_auc": null
+    },
+    "rating_only": {
+      "accuracy": 0.5521871820956257,
+      "precision": 0.38041733547351525,
+      "recall": 0.5906542056074766,
+      "f1": 0.46277764217720285,
+      "roc_auc": 0.5857413106700172
+    },
+    "rating_clock": {
+      "accuracy": 0.696236012207528,
+      "precision": 0.5610021786492375,
+      "recall": 0.32087227414330216,
+      "f1": 0.40824415378517637,
+      "roc_auc": 0.6976797394848049
+    },
+    "rating_engine": {
+      "accuracy": 0.6917599186164801,
+      "precision": 0.5398230088495575,
+      "recall": 0.38006230529595014,
+      "f1": 0.4460694698354662,
+      "roc_auc": 0.699377511741066
+    },
+    "rating_clock_engine": {
+      "accuracy": 0.7623601220752798,
+      "precision": 0.6921723834652594,
+      "recall": 0.49034267912772583,
+      "f1": 0.574033552151714,
+      "roc_auc": 0.8110519430405361
+    },
+    "full_plyshock": {
+      "accuracy": 0.7621566632756867,
+      "precision": 0.7022263450834879,
+      "recall": 0.4716510903426791,
+      "f1": 0.5642937010808796,
+      "roc_auc": 0.8129028432673575
+    }
+  }
+}
