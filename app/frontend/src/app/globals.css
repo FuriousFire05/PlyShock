@@ -1,26 +1,88 @@
 @import "tailwindcss";
 
 :root {
-  --background: #ffffff;
-  --foreground: #171717;
+  --background: #090908;
+  --foreground: #f6f0dc;
+  --font-body: var(--font-geist-sans), ui-sans-serif, system-ui, sans-serif;
+  --font-mono-stack: var(--font-geist-mono), "SFMono-Regular", Consolas, monospace;
 }
 
 @theme inline {
   --color-background: var(--background);
   --color-foreground: var(--foreground);
-  --font-sans: var(--font-geist-sans);
-  --font-mono: var(--font-geist-mono);
+  --color-ivory: #f6f0dc;
+  --color-gold: #d4af37;
+  --color-charcoal-950: #090908;
+  --color-charcoal-900: #0d0c0b;
+  --color-charcoal-800: #14120f;
+  --font-sans: var(--font-body);
+  --font-mono: var(--font-mono-stack);
 }
 
-@media (prefers-color-scheme: dark) {
-  :root {
-    --background: #0a0a0a;
-    --foreground: #ededed;
-  }
+* {
+  box-sizing: border-box;
+}
+
+html {
+  background: var(--background);
 }
 
 body {
-  background: var(--background);
+  min-height: 100vh;
+  background:
+    linear-gradient(135deg, rgba(212, 175, 55, 0.08), transparent 30%),
+    linear-gradient(225deg, rgba(75, 112, 88, 0.1), transparent 36%),
+    #090908;
   color: var(--foreground);
-  font-family: Arial, Helvetica, sans-serif;
+  font-family: var(--font-body);
+}
+
+button,
+select,
+input {
+  font: inherit;
+}
+
+::selection {
+  background: rgba(212, 175, 55, 0.35);
+  color: #fff8df;
+}
+
+.bg-page {
+  background:
+    radial-gradient(circle at 18% 10%, rgba(212, 175, 55, 0.12), transparent 28%),
+    radial-gradient(circle at 78% 24%, rgba(92, 133, 103, 0.11), transparent 30%),
+    linear-gradient(180deg, rgba(255, 255, 255, 0.035), transparent 34%),
+    #090908;
+}
+
+.panel {
+  border-radius: 1.25rem;
+  background:
+    linear-gradient(180deg, rgba(255, 255, 255, 0.065), rgba(255, 255, 255, 0.024)),
+    rgba(18, 17, 15, 0.84);
+  box-shadow:
+    0 24px 70px rgba(0, 0, 0, 0.3),
+    inset 0 1px 0 rgba(255, 255, 255, 0.06);
+  backdrop-filter: blur(18px);
+}
+
+.replay-slider {
+  accent-color: #d4af37;
+}
+
+.replay-slider::-webkit-slider-runnable-track {
+  height: 8px;
+  border-radius: 999px;
+  background: rgba(255, 255, 255, 0.12);
+}
+
+.replay-slider::-webkit-slider-thumb {
+  margin-top: -5px;
+}
+
+.replay-slider::-moz-range-track {
+  height: 8px;
+  border-radius: 999px;
+  background: rgba(255, 255, 255, 0.12);
 }
