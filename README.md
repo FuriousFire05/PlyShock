@@ -327,6 +327,56 @@ Run linting:
 uv run ruff check research/src research/tests
 ```
 
+## Running the Demo App
+
+Start the backend from the repository root:
+
+```bash
+uv run uvicorn app.backend.main:app --reload
+```
+
+Start the frontend:
+
+```bash
+cd app/frontend
+pnpm dev
+```
+
+Open:
+
+- Frontend: http://localhost:3000
+- Backend docs: http://127.0.0.1:8000/docs
+
+The frontend uses `NEXT_PUBLIC_API_BASE_URL` and falls back to `http://127.0.0.1:8000`.
+
+## Docker Compose
+
+Build and run the full app:
+
+```bash
+docker compose build
+docker compose up
+```
+
+Then open:
+
+- Frontend: http://localhost:3000
+- Backend health: http://localhost:8000/health
+- Backend docs: http://localhost:8000/docs
+
+Docker uses Linux Stockfish installed inside the backend image. Local Windows development still
+uses `research/tools/stockfish/stockfish.exe` when `STOCKFISH_PATH` is not set.
+
+Before running Docker, make sure these local artifacts exist:
+
+- `research/artifacts/models/best_model.joblib`
+- `research/data/processed/feature_schema_50k.json`
+- `research/artifacts/metrics/model_comparison.json`
+
+The Compose setup mounts model, schema, and metrics artifacts as read-only volumes. Raw Lichess
+dumps, interim datasets, trained model binaries, and local Stockfish binaries are not committed
+and are not baked into Docker images.
+
 ### Example Pipeline Commands
 
 Build filtered games:
@@ -439,3 +489,12 @@ Docker packaging
 ## Disclaimer
 
 The reported results are based on a sampled subset of Lichess games and should be interpreted as project-level experimental findings, not universal claims about all chess games. Further validation on additional months, larger samples, and different time controls would strengthen generalization.
+
+---
+
+## Author
+
+Created by [FuriousFire](https://github.com/FuriousFire05)
+
+---
+

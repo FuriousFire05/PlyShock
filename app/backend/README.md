@@ -24,6 +24,28 @@ The demo relies on local artifacts:
 These model, schema, and Stockfish files are local demo artifacts and may not be committed in
 all clones. Missing artifacts are reported through `/health` and clear API errors.
 
+The backend supports environment overrides:
+
+- `STOCKFISH_PATH`
+- `PLYSHOCK_MODEL_PATH`
+- `PLYSHOCK_FEATURE_SCHEMA_PATH`
+
+For local Windows development, leave `STOCKFISH_PATH` unset to use
+`research/tools/stockfish/stockfish.exe`. Docker installs Linux Stockfish inside the backend
+image and sets `STOCKFISH_PATH=/usr/games/stockfish`.
+
+## Docker
+
+From the repository root:
+
+```bash
+docker compose build
+docker compose up
+```
+
+The Compose setup mounts local model, schema, and metrics artifacts into the backend container as
+read-only volumes. The trained model and large datasets are not baked into the image.
+
 ## Demo Games
 
 List bundled PGNs:

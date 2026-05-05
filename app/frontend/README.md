@@ -29,6 +29,14 @@ NEXT_PUBLIC_API_BASE_URL=http://127.0.0.1:8000
 
 If unset, it falls back to `http://127.0.0.1:8000`. No API keys, auth, or cloud services are required.
 
+For Docker Compose, the frontend image is built with:
+
+```bash
+NEXT_PUBLIC_API_BASE_URL=http://localhost:8000
+```
+
+This lets browser requests from `http://localhost:3000` reach the published backend port.
+
 ## Supported Modes
 
 - Demo Replay: select a bundled PGN from `GET /demo-games`, then load move-by-move replay data from `GET /demo-games/{game_id}/replay`.
@@ -45,3 +53,17 @@ Stockfish evaluation updates every move. PlyShock prediction activates only at t
 pnpm lint
 pnpm build
 ```
+
+## Docker
+
+From the repository root:
+
+```bash
+docker compose build
+docker compose up
+```
+
+Then open:
+
+- Frontend: http://localhost:3000
+- Backend docs: http://localhost:8000/docs

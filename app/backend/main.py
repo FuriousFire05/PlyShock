@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import os
 from pathlib import Path
 from typing import Annotated, Any
 
@@ -37,12 +38,27 @@ from app.backend.schemas import (
 )
 
 PROJECT_ROOT = Path(__file__).resolve().parents[2]
-MODEL_PATH = PROJECT_ROOT / "research" / "artifacts" / "models" / "best_model.joblib"
-SCHEMA_PATH = PROJECT_ROOT / "research" / "data" / "processed" / "feature_schema_50k.json"
+MODEL_PATH = Path(
+    os.environ.get(
+        "PLYSHOCK_MODEL_PATH",
+        PROJECT_ROOT / "research" / "artifacts" / "models" / "best_model.joblib",
+    )
+)
+SCHEMA_PATH = Path(
+    os.environ.get(
+        "PLYSHOCK_FEATURE_SCHEMA_PATH",
+        PROJECT_ROOT / "research" / "data" / "processed" / "feature_schema_50k.json",
+    )
+)
 METRICS_PATH = PROJECT_ROOT / "research" / "artifacts" / "metrics" / "model_comparison.json"
 ABLATION_PATH = PROJECT_ROOT / "research" / "artifacts" / "metrics" / "ablation_results_50k.json"
 PREDICTIONS_PATH = PROJECT_ROOT / "research" / "artifacts" / "metrics" / "test_predictions.csv"
-STOCKFISH_PATH = PROJECT_ROOT / "research" / "tools" / "stockfish" / "stockfish.exe"
+STOCKFISH_PATH = Path(
+    os.environ.get(
+        "STOCKFISH_PATH",
+        PROJECT_ROOT / "research" / "tools" / "stockfish" / "stockfish.exe",
+    )
+)
 DEMO_GAMES_DIR = Path(__file__).resolve().parent / "demo_games"
 
 app = FastAPI(title="PlyShock Demo Backend")
