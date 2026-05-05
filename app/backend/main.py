@@ -21,6 +21,7 @@ from app.backend.pgn_demo import (
     DemoAnalysisError,
     analyze_pgn_replay_text,
     analyze_pgn_text,
+    evaluate_live_position,
     summarize_pgn_text,
 )
 from app.backend.schemas import (
@@ -28,6 +29,8 @@ from app.backend.schemas import (
     AnalyzePgnReplayRequest,
     AnalyzePgnRequest,
     DemoGameInfo,
+    LiveEvaluateRequest,
+    LiveEvaluateResponse,
     PredictRequest,
     PredictResponse,
     ReplayResponse,
@@ -74,6 +77,7 @@ def health() -> dict[str, str | bool | int]:
         "demo_games_count": len(_list_demo_game_paths()),
         "replay_supported": True,
         "upload_pgn_supported": True,
+        "live_mode_supported": True,
     }
 
 
@@ -171,6 +175,12 @@ def analyze_pgn_replay(request: AnalyzePgnReplayRequest) -> ReplayResponse:
     return _run_pgn_replay_analysis(request)
 
 
+@app.post("/live/evaluate", response_model=LiveEvaluateResponse)
+def live_evaluate(request: LiveEvaluateRequest) -> LiveEvaluateResponse:
+    """Evaluate a live board and optionally return a checkpoint PlyShock prediction."""
+    return _run_live_evaluation(request)
+
+
 @app.post("/predict", response_model=PredictResponse)
 def predict(request: PredictRequest) -> PredictResponse:
     """Predict whether the lower-rated player wins from model features."""
@@ -245,6 +255,33 @@ def _run_pgn_replay_analysis(request: AnalyzePgnReplayRequest) -> ReplayResponse
         raise HTTPException(status_code=error.status_code, detail=error.detail) from error
 
     return ReplayResponse(**result)
+
+
+def _run_live_evaluation(request: LiveEvaluateRequest) -> LiveEvaluateResponse:
+    try:
+        result = evaluate_live_position(
+            fen=request.fen,
+            white_elo=request.white_elo,
+            black_elo=request.black_elo,
+            white_clock_sec=request.white_clock_sec,
+            black_clock_sec=request.black_clock_sec,
+            initial_time_sec=request.initial_time_sec,
+            increment_sec=request.increment_sec,
+            fullmove_number=request.fullmove_number,
+            ply=request.ply,
+            checkpoint_history=[
+                history_item.model_dump() for history_item in request.checkpoint_history
+            ],
+            eval_depth=request.eval_depth,
+            prediction_depth=request.prediction_depth,
+            model_path=MODEL_PATH,
+            schema_path=SCHEMA_PATH,
+            stockfish_path=STOCKFISH_PATH,
+        )
+    except DemoAnalysisError as error:
+        raise HTTPException(status_code=error.status_code, detail=error.detail) from error
+
+    return LiveEvaluateResponse(**result)
 
 
 def _list_demo_game_paths() -> list[Path]:

@@ -33,6 +33,26 @@ class AnalyzePgnReplayRequest(BaseModel):
     max_plies: int = 90
 
 
+class LiveCheckpointHistoryItem(BaseModel):
+    checkpoint_move: int
+    eval_cp_lower_pov: float
+
+
+class LiveEvaluateRequest(BaseModel):
+    fen: str
+    white_elo: int
+    black_elo: int
+    white_clock_sec: int | float | None
+    black_clock_sec: int | float | None
+    initial_time_sec: int | float
+    increment_sec: int | float
+    fullmove_number: int
+    ply: int
+    checkpoint_history: list[LiveCheckpointHistoryItem] = Field(default_factory=list)
+    eval_depth: int = 6
+    prediction_depth: int = 8
+
+
 class DemoGameInfo(BaseModel):
     id: str
     filename: str
@@ -57,3 +77,16 @@ class ReplayResponse(BaseModel):
     moves: list[dict[str, Any]]
     checkpoints: list[dict[str, Any]]
     summary: dict[str, Any]
+
+
+class LiveEvaluateResponse(BaseModel):
+    stockfish_eval_cp_white_pov: int
+    stockfish_bar: float
+    lower_rated_color: str
+    higher_rated_color: str
+    rating_gap: int
+    lower_clock_sec: int | float | None
+    higher_clock_sec: int | float | None
+    is_checkpoint: bool
+    checkpoint_move: int | None
+    plyshock: dict[str, Any] | None

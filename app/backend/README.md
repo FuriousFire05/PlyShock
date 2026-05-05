@@ -78,3 +78,18 @@ curl -X POST http://127.0.0.1:8000/analyze-pgn-replay \
 Predictions activate only at the configured mid-game snapshot moves. The default snapshot
 moves are 15, 20, 25, 30, and 35. Replay responses include every returned ply for board,
 clock, and Stockfish eval-bar rendering, but `plyshock` is only populated on checkpoint plies.
+
+## Live Board Evaluation
+
+Evaluate a live FEN with clocks:
+
+```bash
+curl -X POST http://127.0.0.1:8000/live/evaluate \
+  -H "Content-Type: application/json" \
+  -d "{\"fen\":\"rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1\",\"white_elo\":1500,\"black_elo\":1700,\"white_clock_sec\":600,\"black_clock_sec\":600,\"initial_time_sec\":600,\"increment_sec\":5,\"fullmove_number\":1,\"ply\":0,\"checkpoint_history\":[],\"eval_depth\":6,\"prediction_depth\":8}"
+```
+
+`/live/evaluate` is stateless. Stockfish evaluation runs for every submitted FEN and returns
+`stockfish_eval_cp_white_pov` plus a normalized `stockfish_bar`. PlyShock model prediction only
+appears when the submitted position is at a trained checkpoint move: 15, 20, 25, 30, or 35.
+Before those checkpoints, and between them, `plyshock` is `null`.

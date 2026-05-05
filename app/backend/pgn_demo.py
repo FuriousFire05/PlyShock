@@ -8,6 +8,7 @@ from math import tanh
 from pathlib import Path
 from typing import Any
 
+import chess
 import chess.pgn
 import pandas as pd
 from plyshock.engine.stockfish_client import evaluate_fens
@@ -185,6 +186,138 @@ def analyze_pgn_replay_text(
     }
 
 
+def evaluate_live_position(
+    *,
+    fen: str,
+    white_elo: int,
+    black_elo: int,
+    white_clock_sec: int | float | None,
+    black_clock_sec: int | float | None,
+    initial_time_sec: int | float,
+    increment_sec: int | float,
+    fullmove_number: int,
+    ply: int,
+    checkpoint_history: list[dict[str, object]],
+    eval_depth: int,
+    prediction_depth: int,
+    model_path: Path,
+    schema_path: Path,
+    stockfish_path: Path,
+) -> dict[str, object]:
+    """Evaluate a live board and optionally return a checkpoint PlyShock prediction."""
+    _validate_artifact_paths(
+        model_path=model_path,
+        schema_path=schema_path,
+        stockfish_path=stockfish_path,
+    )
+    _validate_depth(eval_depth, "eval_depth")
+    _validate_depth(prediction_depth, "prediction_depth")
+    _validate_live_position_inputs(
+        white_elo=white_elo,
+        black_elo=black_elo,
+        initial_time_sec=initial_time_sec,
+        fullmove_number=fullmove_number,
+        ply=ply,
+    )
+    _validate_fen(fen)
+
+    rating_context = get_rating_context(white_elo, black_elo)
+    lower_rated_color = str(rating_context["lower_rated_color"])
+    higher_rated_color = str(rating_context["higher_rated_color"])
+    lower_clock_sec, higher_clock_sec = _map_live_clocks(
+        lower_rated_color=lower_rated_color,
+        higher_rated_color=higher_rated_color,
+        white_clock_sec=white_clock_sec,
+        black_clock_sec=black_clock_sec,
+    )
+
+    try:
+        evaluation = evaluate_fens(stockfish_path, [fen], depth=eval_depth)[0]
+    except Exception as error:
+        raise DemoAnalysisError(503, f"Stockfish evaluation failed: {error}") from error
+
+    eval_cp_white_pov = int(evaluation.eval_cp_white_pov)
+    is_checkpoint = _is_live_checkpoint(fullmove_number=fullmove_number, ply=ply)
+    checkpoint_move = fullmove_number if is_checkpoint else None
+
+    response: dict[str, object] = {
+        "stockfish_eval_cp_white_pov": eval_cp_white_pov,
+        "stockfish_bar": float(tanh(eval_cp_white_pov / 400)),
+        "lower_rated_color": lower_rated_color,
+        "higher_rated_color": higher_rated_color,
+        "rating_gap": int(rating_context["rating_gap"]),
+        "lower_clock_sec": lower_clock_sec,
+        "higher_clock_sec": higher_clock_sec,
+        "is_checkpoint": is_checkpoint,
+        "checkpoint_move": checkpoint_move,
+        "plyshock": None,
+    }
+
+    if not is_checkpoint:
+        return response
+
+    if lower_clock_sec is None or higher_clock_sec is None:
+        raise DemoAnalysisError(
+            400,
+            "white_clock_sec and black_clock_sec are required for checkpoint predictions.",
+        )
+
+    eval_cp_lower_pov = (
+        eval_cp_white_pov if lower_rated_color == "white" else -eval_cp_white_pov
+    )
+    feature_values = _build_live_model_features(
+        rating_gap=int(rating_context["rating_gap"]),
+        lower_is_white=lower_rated_color == "white",
+        snapshot_move=fullmove_number,
+        snapshot_ply=ply,
+        initial_time_sec=float(initial_time_sec),
+        increment_sec=float(increment_sec),
+        lower_clock_sec=float(lower_clock_sec),
+        higher_clock_sec=float(higher_clock_sec),
+        eval_cp_white_pov=eval_cp_white_pov,
+        eval_cp_lower_pov=eval_cp_lower_pov,
+        eval_cp_clipped=int(evaluation.eval_cp_clipped),
+        mate_flag=bool(evaluation.mate_flag),
+        checkpoint_history=checkpoint_history,
+    )
+
+    try:
+        schema = load_feature_schema(schema_path)
+        model_input_features = get_model_input_features(schema)
+        missing_features = [
+            feature for feature in model_input_features if feature not in feature_values
+        ]
+        if missing_features:
+            missing = ", ".join(missing_features)
+            raise DemoAnalysisError(
+                400,
+                f"Live feature row is missing model feature(s): {missing}.",
+            )
+
+        model_features = pd.DataFrame(
+            [{feature: feature_values[feature] for feature in model_input_features}],
+            columns=model_input_features,
+        )
+        model = load_model(model_path)
+        predicted_label = int(model.predict(model_features)[0])
+        upset_probability = _predict_upset_probabilities(model, model_features)[0]
+    except DemoAnalysisError:
+        raise
+    except ValueError as error:
+        raise DemoAnalysisError(400, str(error)) from error
+    except Exception as error:
+        raise DemoAnalysisError(503, f"Model prediction failed: {error}") from error
+
+    response["plyshock"] = {
+        "upset_probability": upset_probability,
+        "predicted_label": predicted_label,
+        "interpretation": _interpretation(predicted_label),
+        "eval_cp_lower_pov": float(eval_cp_lower_pov),
+        "lower_is_better_by_engine": eval_cp_lower_pov > 0,
+    }
+    return response
+
+
 def _predict_checkpoint_snapshots(
     *,
     game_record: dict[str, object],
@@ -305,6 +438,36 @@ def _validate_moves(moves: list[int], name: str) -> None:
         raise DemoAnalysisError(400, f"{name} must contain positive move numbers.")
 
 
+def _validate_fen(fen: str) -> None:
+    try:
+        board = chess.Board(fen)
+    except ValueError as error:
+        raise DemoAnalysisError(400, f"Invalid FEN: {error}") from error
+
+    if not board.is_valid():
+        raise DemoAnalysisError(400, "Invalid FEN: position is not a valid chess board state.")
+
+
+def _validate_live_position_inputs(
+    *,
+    white_elo: int,
+    black_elo: int,
+    initial_time_sec: int | float,
+    fullmove_number: int,
+    ply: int,
+) -> None:
+    if white_elo <= 0 or black_elo <= 0:
+        raise DemoAnalysisError(400, "white_elo and black_elo must be positive integers.")
+    if white_elo == black_elo:
+        raise DemoAnalysisError(400, "Live upset prediction requires a non-zero rating gap.")
+    if initial_time_sec <= 0:
+        raise DemoAnalysisError(400, "initial_time_sec must be greater than 0.")
+    if fullmove_number <= 0:
+        raise DemoAnalysisError(400, "fullmove_number must be a positive integer.")
+    if ply < 0:
+        raise DemoAnalysisError(400, "ply must be greater than or equal to 0.")
+
+
 def _validate_and_build_game_record(game: ParsedGame) -> dict[str, object]:
     filter_result = validate_game_for_plyshock(game)
     if not filter_result.accepted:
@@ -423,6 +586,116 @@ def _build_replay_moves(game: chess.pgn.Game, max_plies: int) -> list[dict[str, 
 
 def _side_to_move(board: chess.Board) -> str:
     return "white" if board.turn == chess.WHITE else "black"
+
+
+def _map_live_clocks(
+    *,
+    lower_rated_color: str,
+    higher_rated_color: str,
+    white_clock_sec: int | float | None,
+    black_clock_sec: int | float | None,
+) -> tuple[int | float | None, int | float | None]:
+    clock_by_color = {"white": white_clock_sec, "black": black_clock_sec}
+    return clock_by_color[lower_rated_color], clock_by_color[higher_rated_color]
+
+
+def _is_live_checkpoint(*, fullmove_number: int, ply: int) -> bool:
+    if fullmove_number not in {15, 20, 25, 30, 35}:
+        return False
+    if fullmove_number < 15:
+        return False
+
+    expected_ply = fullmove_number * 2
+    return abs(ply - expected_ply) <= 1
+
+
+def _build_live_model_features(
+    *,
+    rating_gap: int,
+    lower_is_white: bool,
+    snapshot_move: int,
+    snapshot_ply: int,
+    initial_time_sec: float,
+    increment_sec: float,
+    lower_clock_sec: float,
+    higher_clock_sec: float,
+    eval_cp_white_pov: int,
+    eval_cp_lower_pov: int,
+    eval_cp_clipped: int,
+    mate_flag: bool,
+    checkpoint_history: list[dict[str, object]],
+) -> dict[str, float | int]:
+    thresholds = max(initial_time_sec * 0.10, 30)
+    lower_time_pressure_flag = int(lower_clock_sec <= thresholds)
+    higher_time_pressure_flag = int(higher_clock_sec <= thresholds)
+    eval_history = _extract_live_eval_history(checkpoint_history)
+    eval_delta, eval_trend, eval_volatility = _live_eval_trend_features(
+        eval_history=eval_history,
+        current_eval=eval_cp_lower_pov,
+    )
+
+    return {
+        "rating_gap": rating_gap,
+        "lower_is_white": int(lower_is_white),
+        "snapshot_move": snapshot_move,
+        "snapshot_ply": snapshot_ply,
+        "initial_time_sec": initial_time_sec,
+        "increment_sec": increment_sec,
+        "lower_clock_sec": lower_clock_sec,
+        "higher_clock_sec": higher_clock_sec,
+        "clock_diff_lower_minus_higher": lower_clock_sec - higher_clock_sec,
+        "lower_clock_ratio": lower_clock_sec / initial_time_sec,
+        "higher_clock_ratio": higher_clock_sec / initial_time_sec,
+        "lower_time_pressure_flag": lower_time_pressure_flag,
+        "higher_time_pressure_flag": higher_time_pressure_flag,
+        "eval_cp_white_pov": eval_cp_white_pov,
+        "eval_cp_clipped": eval_cp_clipped,
+        "eval_cp_lower_pov": eval_cp_lower_pov,
+        "eval_abs": abs(eval_cp_lower_pov),
+        "lower_is_better_by_engine": int(eval_cp_lower_pov > 0),
+        "mate_flag": int(mate_flag),
+        "eval_delta_from_prev_snapshot": eval_delta,
+        "eval_trend_from_first_snapshot": eval_trend,
+        "eval_volatility_so_far": eval_volatility,
+        "large_eval_swing_flag": int(abs(eval_delta) >= 150),
+        "rating_gap_x_eval_lower_pov": rating_gap * eval_cp_lower_pov,
+        "higher_time_pressure_x_eval_volatility": higher_time_pressure_flag * eval_volatility,
+        "lower_worse_but_higher_under_pressure": int(
+            eval_cp_lower_pov < -100 and higher_time_pressure_flag == 1
+        ),
+    }
+
+
+def _extract_live_eval_history(checkpoint_history: list[dict[str, object]]) -> list[float]:
+    values: list[float] = []
+    for item in checkpoint_history:
+        value = item.get("eval_cp_lower_pov")
+        if value is None:
+            continue
+        try:
+            values.append(float(value))
+        except (TypeError, ValueError):
+            continue
+    return values
+
+
+def _live_eval_trend_features(
+    *, eval_history: list[float], current_eval: float
+) -> tuple[float, float, float]:
+    if not eval_history:
+        return 0.0, 0.0, 0.0
+
+    eval_delta = current_eval - eval_history[-1]
+    eval_trend = current_eval - eval_history[0]
+    values = [*eval_history, float(current_eval)]
+    if len(values) < 2:
+        eval_volatility = 0.0
+    else:
+        mean = sum(values) / len(values)
+        variance = sum((value - mean) ** 2 for value in values) / (len(values) - 1)
+        eval_volatility = variance**0.5
+
+    return eval_delta, eval_trend, eval_volatility
 
 
 def _build_plyshock_payload(checkpoint: dict[str, object]) -> dict[str, object]:
