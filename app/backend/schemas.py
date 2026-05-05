@@ -25,6 +25,14 @@ class AnalyzePgnRequest(BaseModel):
     snapshot_moves: list[int] = Field(default_factory=lambda: DEFAULT_SNAPSHOT_MOVES.copy())
 
 
+class AnalyzePgnReplayRequest(BaseModel):
+    pgn_text: str
+    eval_depth: int = 6
+    prediction_depth: int = 8
+    checkpoint_moves: list[int] = Field(default_factory=lambda: DEFAULT_SNAPSHOT_MOVES.copy())
+    max_plies: int = 90
+
+
 class DemoGameInfo(BaseModel):
     id: str
     filename: str
@@ -34,4 +42,11 @@ class DemoGameInfo(BaseModel):
 class AnalysisResponse(BaseModel):
     metadata: dict[str, Any]
     snapshots: list[dict[str, Any]]
+    summary: dict[str, Any]
+
+
+class ReplayResponse(BaseModel):
+    metadata: dict[str, Any]
+    moves: list[dict[str, Any]]
+    checkpoints: list[dict[str, Any]]
     summary: dict[str, Any]

@@ -7,6 +7,7 @@ from typing import Annotated, Any
 
 import pandas as pd
 from fastapi import FastAPI, HTTPException, Query
+from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import PlainTextResponse
 
 from app.backend.model_loader import (
@@ -16,13 +17,15 @@ from app.backend.model_loader import (
     load_json,
     load_model,
 )
-from app.backend.pgn_demo import DemoAnalysisError, analyze_pgn_text
+from app.backend.pgn_demo import DemoAnalysisError, analyze_pgn_replay_text, analyze_pgn_text
 from app.backend.schemas import (
     AnalysisResponse,
+    AnalyzePgnReplayRequest,
     AnalyzePgnRequest,
     DemoGameInfo,
     PredictRequest,
     PredictResponse,
+    ReplayResponse,
 )
 
 PROJECT_ROOT = Path(__file__).resolve().parents[2]
@@ -35,6 +38,19 @@ STOCKFISH_PATH = PROJECT_ROOT / "research" / "tools" / "stockfish" / "stockfish.
 DEMO_GAMES_DIR = Path(__file__).resolve().parent / "demo_games"
 
 app = FastAPI(title="PlyShock Demo Backend")
+
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=[
+        "http://localhost:3000",
+        "http://127.0.0.1:3000",
+        "http://localhost:3001",
+        "http://127.0.0.1:3001",
+    ],
+    allow_credentials=True,
+    allow_methods=["*"],
+    allow_headers=["*"],
+)
 
 
 @app.get("/health")
@@ -116,10 +132,36 @@ def demo_game_analysis(
     return _run_pgn_analysis(request)
 
 
+@app.get("/demo-games/{game_id}/replay", response_model=ReplayResponse)
+def demo_game_replay(
+    game_id: str,
+    eval_depth: int = 6,
+    prediction_depth: int = 8,
+    checkpoint_moves: Annotated[list[int] | None, Query()] = None,
+    max_plies: int = 90,
+) -> ReplayResponse:
+    """Analyze a bundled demo PGN and return full replay data."""
+    path = _get_demo_game_path(game_id)
+    request = AnalyzePgnReplayRequest(
+        pgn_text=path.read_text(encoding="utf-8"),
+        eval_depth=eval_depth,
+        prediction_depth=prediction_depth,
+        checkpoint_moves=checkpoint_moves or [15, 20, 25, 30, 35],
+        max_plies=max_plies,
+    )
+    return _run_pgn_replay_analysis(request)
+
+
 @app.post("/analyze-pgn", response_model=AnalysisResponse)
 def analyze_pgn(request: AnalyzePgnRequest) -> AnalysisResponse:
     """Analyze a submitted PGN and return a mid-game prediction timeline."""
     return _run_pgn_analysis(request)
+
+
+@app.post("/analyze-pgn-replay", response_model=ReplayResponse)
+def analyze_pgn_replay(request: AnalyzePgnReplayRequest) -> ReplayResponse:
+    """Analyze a submitted PGN and return full replay data."""
+    return _run_pgn_replay_analysis(request)
 
 
 @app.post("/predict", response_model=PredictResponse)
@@ -178,6 +220,24 @@ def _run_pgn_analysis(request: AnalyzePgnRequest) -> AnalysisResponse:
         raise HTTPException(status_code=error.status_code, detail=error.detail) from error
 
     return AnalysisResponse(**result)
+
+
+def _run_pgn_replay_analysis(request: AnalyzePgnReplayRequest) -> ReplayResponse:
+    try:
+        result = analyze_pgn_replay_text(
+            pgn_text=request.pgn_text,
+            eval_depth=request.eval_depth,
+            prediction_depth=request.prediction_depth,
+            checkpoint_moves=request.checkpoint_moves,
+            max_plies=request.max_plies,
+            model_path=MODEL_PATH,
+            schema_path=SCHEMA_PATH,
+            stockfish_path=STOCKFISH_PATH,
+        )
+    except DemoAnalysisError as error:
+        raise HTTPException(status_code=error.status_code, detail=error.detail) from error
+
+    return ReplayResponse(**result)
 
 
 def _list_demo_game_paths() -> list[Path]:
