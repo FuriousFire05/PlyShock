@@ -1,0 +1,12 @@
+[Event "Rated Bullet tournament https://lichess.org/tournament/ptdGjjKQ"]
+[Site "https://lichess.org/iqpLvrB1"]
+[Date "2026.03.01"]
+[White "Nisva"]
+[Black "Hamletsway"]
+[Result "1-0"]
+[WhiteElo "2402"]
+[BlackElo "2253"]
+[TimeControl "30+0"]
+[Termination "Normal"]
+
+1. c3 { [%clk 0:00:30] } c5 { [%clk 0:00:30] } 2. d3 { [%clk 0:00:30] } d5 { [%clk 0:00:29] } 3. Nf3 { [%clk 0:00:30] } Nd7 { [%clk 0:00:29] } 4. g3 { [%clk 0:00:30] } e5 { [%clk 0:00:29] } 5. c4 { [%clk 0:00:29] } e4 { [%clk 0:00:28] } 6. cxd5 { [%clk 0:00:29] } exf3 { [%clk 0:00:27] } 7. exf3 { [%clk 0:00:29] } Ngf6 { [%clk 0:00:27] } 8. Bg2 { [%clk 0:00:29] } Nxd5 { [%clk 0:00:26] } 9. O-O { [%clk 0:00:29] } N5f6 { [%clk 0:00:26] } 10. Re1+ { [%clk 0:00:29] } Be7 { [%clk 0:00:26] } 11. Nc3 { [%clk 0:00:29] } O-O { [%clk 0:00:25] } 12. Ne4 { [%clk 0:00:29] } Nxe4 { [%clk 0:00:24] } 13. fxe4 { [%clk 0:00:29] } Ne5 { [%clk 0:00:23] } 14. f3 { [%clk 0:00:29] } Qxd3 { [%clk 0:00:22] } 15. Qa4 { [%clk 0:00:27] } Qd4+ { [%clk 0:00:21] } 16. Qxd4 { [%clk 0:00:25] } cxd4 { [%clk 0:00:21] } 17. f4 { [%clk 0:00:25] } Nd3 { [%clk 0:00:20] } 18. Rd1 { [%clk 0:00:25] } Nxc1 { [%clk 0:00:19] } 19. Raxc1 { [%clk 0:00:24] } Bg4 { [%clk 0:00:16] } 20. Re1 { [%clk 0:00:21] } Rfd8 { [%clk 0:00:14] } 21. h3 { [%clk 0:00:20] } Bd7 { [%clk 0:00:11] } 22. Kh2 { [%clk 0:00:19] } Bc6 { [%clk 0:00:11] } 23. e5 { [%clk 0:00:18] } Bb4 { [%clk 0:00:10] } 24. Rf1 { [%clk 0:00:16] } d3 { [%clk 0:00:10] } 25. Bxc6 { [%clk 0:00:15] } bxc6 { [%clk 0:00:08] } 26. Rxc6 { [%clk 0:00:14] } d2 { [%clk 0:00:08] } 27. Rd1 { [%clk 0:00:13] } Rac8 { [%clk 0:00:08] } 28. Rxc8 { [%clk 0:00:12] } Rxc8 { [%clk 0:00:08] } 29. a3 { [%clk 0:00:11] } Rc1 { [%clk 0:00:08] } 30. Rxd2 { [%clk 0:00:07] } Bxd2 { [%clk 0:00:07] } 31. h4 { [%clk 0:00:06] } Rb1 { [%clk 0:00:06] } 32. Kh3 { [%clk 0:00:06] } Rxb2 { [%clk 0:00:06] } 33. e6 { [%clk 0:00:05] } Rb3 { [%clk 0:00:06] } 34. e7 { [%clk 0:00:05] } Rxa3 { [%clk 0:00:06] } 35. e8=Q# { [%clk 0:00:05] } 1-0
