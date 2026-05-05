@@ -37,6 +37,13 @@ class DemoGameInfo(BaseModel):
     id: str
     filename: str
     path: str
+    label: str | None = None
+    white_elo: int | None = None
+    black_elo: int | None = None
+    result: str | None = None
+    rating_gap: int | None = None
+    lower_rated_color: str | None = None
+    actual_upset_label: int | None = None
 
 
 class AnalysisResponse(BaseModel):

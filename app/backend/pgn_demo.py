@@ -34,6 +34,21 @@ class DemoAnalysisError(Exception):
         super().__init__(detail)
 
 
+def summarize_pgn_text(pgn_text: str) -> dict[str, object]:
+    """Return lightweight demo-game metadata without engine or model work."""
+    parsed_game = _parse_pgn_text(pgn_text)
+    game_record = _build_game_record(parsed_game)
+    return {
+        "label": _build_game_label(parsed_game),
+        "white_elo": parsed_game.white_elo,
+        "black_elo": parsed_game.black_elo,
+        "result": parsed_game.result,
+        "rating_gap": game_record["rating_gap"],
+        "lower_rated_color": game_record["lower_rated_color"],
+        "actual_upset_label": game_record["upset_label"],
+    }
+
+
 def analyze_pgn_text(
     *,
     pgn_text: str,
@@ -214,10 +229,13 @@ def _predict_checkpoint_snapshots(
         missing = ", ".join(missing_features)
         raise DemoAnalysisError(400, f"Feature dataframe is missing model feature(s): {missing}.")
 
-    model = load_model(model_path)
-    model_features = feature_df[model_input_features]
-    predicted_labels = [int(label) for label in model.predict(model_features)]
-    upset_probabilities = _predict_upset_probabilities(model, model_features)
+    try:
+        model = load_model(model_path)
+        model_features = feature_df[model_input_features]
+        predicted_labels = [int(label) for label in model.predict(model_features)]
+        upset_probabilities = _predict_upset_probabilities(model, model_features)
+    except Exception as error:
+        raise DemoAnalysisError(503, f"Model prediction failed: {error}") from error
 
     snapshots = []
     for index, row in enumerate(evaluated_rows):
@@ -331,6 +349,12 @@ def _build_replay_metadata(game: ParsedGame, record: dict[str, object]) -> dict[
         }
     )
     return metadata
+
+
+def _build_game_label(game: ParsedGame) -> str:
+    white = game.white or "White"
+    black = game.black or "Black"
+    return f"{white} vs {black} ({game.result})"
 
 
 def _build_replay_moves(game: chess.pgn.Game, max_plies: int) -> list[dict[str, object]]:

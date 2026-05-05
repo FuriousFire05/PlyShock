@@ -10,6 +10,20 @@ Open Swagger docs:
 
 http://127.0.0.1:8000/docs
 
+The backend enables local-development CORS for `localhost` and `127.0.0.1` frontend
+origins on ports 3000 and 3001.
+
+## Local Artifacts
+
+The demo relies on local artifacts:
+
+- `research/artifacts/models/best_model.joblib`
+- `research/data/processed/feature_schema_50k.json`
+- `research/tools/stockfish/stockfish.exe`
+
+These model, schema, and Stockfish files are local demo artifacts and may not be committed in
+all clones. Missing artifacts are reported through `/health` and clear API errors.
+
 ## Demo Games
 
 List bundled PGNs:
@@ -35,6 +49,13 @@ Analyze one bundled PGN with full move replay:
 ```bash
 curl "http://127.0.0.1:8000/demo-games/sample/replay?eval_depth=6&prediction_depth=8&max_plies=90"
 ```
+
+Replay responses include:
+
+- `metadata`: game, Elo, result, rating-gap, and upset-label context
+- `moves`: ply-by-ply FEN, SAN/UCI, clock state, Stockfish eval, and eval-bar value
+- `checkpoints`: compact PlyShock predictions at trained checkpoint moves
+- `summary`: returned plies, evaluation depth, prediction depth, and model name
 
 ## Analyze Uploaded PGN
 

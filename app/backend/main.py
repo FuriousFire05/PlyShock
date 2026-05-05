@@ -17,7 +17,12 @@ from app.backend.model_loader import (
     load_json,
     load_model,
 )
-from app.backend.pgn_demo import DemoAnalysisError, analyze_pgn_replay_text, analyze_pgn_text
+from app.backend.pgn_demo import (
+    DemoAnalysisError,
+    analyze_pgn_replay_text,
+    analyze_pgn_text,
+    summarize_pgn_text,
+)
 from app.backend.schemas import (
     AnalysisResponse,
     AnalyzePgnReplayRequest,
@@ -67,6 +72,8 @@ def health() -> dict[str, str | bool | int]:
         "schema_exists": schema_exists,
         "stockfish_exists": stockfish_exists,
         "demo_games_count": len(_list_demo_game_paths()),
+        "replay_supported": True,
+        "upload_pgn_supported": True,
     }
 
 
@@ -247,10 +254,23 @@ def _list_demo_game_paths() -> list[Path]:
 
 
 def _demo_game_info(path: Path) -> DemoGameInfo:
+    summary: dict[str, object] = {}
+    try:
+        summary = summarize_pgn_text(path.read_text(encoding="utf-8"))
+    except Exception:
+        summary = {"label": path.stem.replace("_", " ").title()}
+
     return DemoGameInfo(
         id=path.stem,
         filename=path.name,
         path=path.relative_to(PROJECT_ROOT).as_posix(),
+        label=_optional_str(summary.get("label")),
+        white_elo=_optional_int(summary.get("white_elo")),
+        black_elo=_optional_int(summary.get("black_elo")),
+        result=_optional_str(summary.get("result")),
+        rating_gap=_optional_int(summary.get("rating_gap")),
+        lower_rated_color=_optional_str(summary.get("lower_rated_color")),
+        actual_upset_label=_optional_int(summary.get("actual_upset_label")),
     )
 
 
@@ -259,3 +279,18 @@ def _get_demo_game_path(game_id: str) -> Path:
         if game_id in {path.stem, path.name}:
             return path
     raise HTTPException(status_code=404, detail=f"Demo game {game_id!r} not found.")
+
+
+def _optional_int(value: object) -> int | None:
+    if value is None:
+        return None
+    try:
+        return int(value)
+    except (TypeError, ValueError):
+        return None
+
+
+def _optional_str(value: object) -> str | None:
+    if value is None:
+        return None
+    return str(value)
