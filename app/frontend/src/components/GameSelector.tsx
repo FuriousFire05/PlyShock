@@ -1,5 +1,6 @@
 import { ChevronDown, Database } from "lucide-react";
 import type { DemoGame } from "@/types/plyshock";
+import { cn } from "@/lib/utils";
 
 interface GameSelectorProps {
   games: DemoGame[];
@@ -10,6 +11,8 @@ interface GameSelectorProps {
 }
 
 export function GameSelector({ games, selectedId, loading, disabled, onSelect }: GameSelectorProps) {
+  const selectedGame = games.find((game) => game.id === selectedId) ?? null;
+
   return (
     <section className="panel border border-white/10 p-5">
       <div className="mb-4 flex items-center justify-between gap-4">
@@ -34,7 +37,7 @@ export function GameSelector({ games, selectedId, loading, disabled, onSelect }:
           </option>
           {games.map((game) => (
             <option key={game.id} value={game.id}>
-              {game.filename}
+              {formatGameLabel(game)}
             </option>
           ))}
         </select>
@@ -44,10 +47,68 @@ export function GameSelector({ games, selectedId, loading, disabled, onSelect }:
         />
       </label>
 
+      {selectedGame ? (
+        <div className="mt-4 grid gap-2 rounded-2xl border border-white/10 bg-white/[0.035] p-3">
+          <div className="flex items-center justify-between gap-3">
+            <p className="truncate text-sm font-semibold text-ivory">{formatGameLabel(selectedGame)}</p>
+            <UpsetBadge value={selectedGame.actual_upset_label} />
+          </div>
+          <div className="grid grid-cols-3 gap-2 text-xs text-stone-400">
+            <Mini label="Gap" value={formatOptional(selectedGame.rating_gap, "pts")} />
+            <Mini label="Result" value={selectedGame.result ?? "--"} />
+            <Mini label="Lower" value={selectedGame.lower_rated_color ?? "--"} />
+          </div>
+        </div>
+      ) : null}
+
       <p className="mt-4 text-xs leading-5 text-stone-500">
         Replays use move-by-move Stockfish evals. PlyShock predictions appear only at trained
         checkpoints.
       </p>
     </section>
+  );
+}
+
+function formatGameLabel(game: DemoGame) {
+  if (game.label) {
+    return game.label;
+  }
+  const white = game.white_elo ? `W${game.white_elo}` : null;
+  const black = game.black_elo ? `B${game.black_elo}` : null;
+  const ratings = white && black ? ` (${white} vs ${black})` : "";
+  return `${game.filename}${ratings}`;
+}
+
+function formatOptional(value: number | null | undefined, suffix = "") {
+  if (value === null || value === undefined || Number.isNaN(value)) {
+    return "--";
+  }
+  return suffix ? `${value} ${suffix}` : String(value);
+}
+
+function Mini({ label, value }: { label: string; value: string }) {
+  return (
+    <div className="rounded-xl border border-white/5 bg-black/20 p-2">
+      <p className="font-mono text-[0.58rem] uppercase tracking-[0.14em] text-stone-600">{label}</p>
+      <p className="mt-1 truncate font-semibold text-stone-300">{value}</p>
+    </div>
+  );
+}
+
+function UpsetBadge({ value }: { value: number | null | undefined }) {
+  const known = value === 0 || value === 1;
+  return (
+    <span
+      className={cn(
+        "shrink-0 rounded-full border px-2.5 py-1 text-[0.66rem] font-semibold uppercase tracking-[0.12em]",
+        value === 1
+          ? "border-red-300/30 bg-red-400/[0.08] text-red-200"
+          : value === 0
+            ? "border-green-300/30 bg-green-400/[0.08] text-green-200"
+            : "border-white/10 bg-white/[0.04] text-stone-400"
+      )}
+    >
+      {known ? (value === 1 ? "Upset" : "Non-upset") : "Demo"}
+    </span>
   );
 }

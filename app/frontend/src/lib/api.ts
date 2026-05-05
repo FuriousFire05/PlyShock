@@ -1,4 +1,5 @@
 import type {
+  AnalyzePgnReplayRequest,
   BackendHealth,
   DemoGame,
   LiveEvaluateRequest,
@@ -63,6 +64,8 @@ export const api = {
   demoGames: () => fetchJson<DemoGame[]>("/demo-games"),
   replay: (gameId: string) =>
     fetchJson<ReplayResponse>(`/demo-games/${encodeURIComponent(gameId)}/replay`),
+  analyzePgnReplay: (body: AnalyzePgnReplayRequest) =>
+    postJson<ReplayResponse, AnalyzePgnReplayRequest>("/analyze-pgn-replay", body),
   liveEvaluate: (body: LiveEvaluateRequest) =>
     postJson<LiveEvaluateResponse, LiveEvaluateRequest>("/live/evaluate", body),
 };

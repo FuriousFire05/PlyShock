@@ -2,9 +2,22 @@
 
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { motion } from "framer-motion";
-import { Activity, BadgeCheck, Brain, Crown, Gauge, ShieldCheck, Trophy, User } from "lucide-react";
+import {
+  Activity,
+  BadgeCheck,
+  Brain,
+  ClipboardPaste,
+  Crown,
+  Database,
+  Gauge,
+  Gamepad2,
+  ShieldCheck,
+  Trophy,
+  User,
+} from "lucide-react";
 import { ChessReplayBoard } from "@/components/ChessReplayBoard";
 import { CheckpointTimeline } from "@/components/CheckpointTimeline";
+import { CustomPgnPanel } from "@/components/CustomPgnPanel";
 import { EvalBar } from "@/components/EvalBar";
 import { GameSelector } from "@/components/GameSelector";
 import { LiveBoardMode } from "@/components/LiveBoardMode";
@@ -16,6 +29,7 @@ import { ResearchSummary } from "@/components/ResearchSummary";
 import { StatusBanner } from "@/components/StatusBanner";
 import { api, API_BASE_URL } from "@/lib/api";
 import type {
+  AnalyzePgnReplayRequest,
   BackendHealth,
   DemoGame,
   PlyShockPrediction,
@@ -23,7 +37,7 @@ import type {
   ReplayResponse,
 } from "@/types/plyshock";
 
-type UiMode = "replay" | "live";
+type UiMode = "demo" | "pgn" | "live";
 
 export default function Home() {
   const [health, setHealth] = useState<BackendHealth | null>(null);
@@ -35,12 +49,16 @@ export default function Home() {
   const [gamesError, setGamesError] = useState<string | null>(null);
   const [selectedGameId, setSelectedGameId] = useState<string | null>(null);
 
-  const [replay, setReplay] = useState<ReplayResponse | null>(null);
+  const [demoReplay, setDemoReplay] = useState<ReplayResponse | null>(null);
   const [replayLoading, setReplayLoading] = useState(false);
   const [replayError, setReplayError] = useState<string | null>(null);
+  const [customReplay, setCustomReplay] = useState<ReplayResponse | null>(null);
+  const [customPgnText, setCustomPgnText] = useState("");
+  const [customLoading, setCustomLoading] = useState(false);
+  const [customError, setCustomError] = useState<string | null>(null);
   const [currentIndex, setCurrentIndex] = useState(0);
   const [isPlaying, setIsPlaying] = useState(false);
-  const [mode, setMode] = useState<UiMode>("replay");
+  const [mode, setMode] = useState<UiMode>("demo");
 
   useEffect(() => {
     let cancelled = false;
@@ -99,7 +117,7 @@ export default function Home() {
     async function loadReplay(gameId: string) {
       setReplayLoading(true);
       setReplayError(null);
-      setReplay(null);
+      setDemoReplay(null);
       setCurrentIndex(0);
       setIsPlaying(false);
 
@@ -108,7 +126,7 @@ export default function Home() {
         if (cancelled) {
           return;
         }
-        setReplay(result);
+        setDemoReplay(result);
       } catch (error) {
         if (cancelled) {
           return;
@@ -128,11 +146,15 @@ export default function Home() {
     };
   }, [selectedGameId]);
 
-  const maxIndex = Math.max(0, (replay?.moves.length ?? 1) - 1);
-  const currentMove = replay?.moves[currentIndex] ?? null;
+  const activeReplay = mode === "pgn" ? customReplay : demoReplay;
+  const activeLoading = mode === "pgn" ? customLoading : replayLoading;
+  const activeError = mode === "pgn" ? customError : replayError;
+  const replaySourceLabel = mode === "pgn" ? "custom PGN" : "bundled demo PGN";
+  const maxIndex = Math.max(0, (activeReplay?.moves.length ?? 1) - 1);
+  const currentMove = activeReplay?.moves[currentIndex] ?? null;
 
   useEffect(() => {
-    if (!isPlaying || !replay?.moves.length) {
+    if (!isPlaying || !activeReplay?.moves.length) {
       return;
     }
 
@@ -141,29 +163,29 @@ export default function Home() {
     }, 900);
 
     return () => window.clearInterval(timer);
-  }, [isPlaying, maxIndex, replay?.moves.length]);
+  }, [activeReplay?.moves.length, isPlaying, maxIndex]);
 
   const latestCheckpoint: ReplayCheckpoint | null = useMemo(() => {
-    if (!replay || !currentMove) {
+    if (!activeReplay || !currentMove) {
       return null;
     }
 
     let latest: ReplayCheckpoint | null = null;
-    for (const checkpoint of replay.checkpoints) {
+    for (const checkpoint of activeReplay.checkpoints) {
       if (checkpoint.ply <= currentMove.ply) {
         latest = checkpoint;
       }
     }
     return latest;
-  }, [currentMove, replay]);
+  }, [activeReplay, currentMove]);
 
   const latestPrediction: PlyShockPrediction | null = useMemo(() => {
-    if (!replay || !latestCheckpoint) {
+    if (!activeReplay || !latestCheckpoint) {
       return null;
     }
 
-    return replay.moves.find((move) => move.ply === latestCheckpoint.ply)?.plyshock ?? null;
-  }, [latestCheckpoint, replay]);
+    return activeReplay.moves.find((move) => move.ply === latestCheckpoint.ply)?.plyshock ?? null;
+  }, [activeReplay, latestCheckpoint]);
 
   const selectedGame = games.find((game) => game.id === selectedGameId) ?? null;
   const backendError = healthError ?? gamesError;
@@ -178,20 +200,62 @@ export default function Home() {
 
   const seekPly = useCallback(
     (ply: number) => {
-      if (!replay) {
+      if (!activeReplay) {
         return;
       }
-      const nextIndex = replay.moves.findIndex((move) => move.ply === ply);
+      const nextIndex = activeReplay.moves.findIndex((move) => move.ply === ply);
       if (nextIndex >= 0) {
         seek(nextIndex);
       }
     },
-    [replay, seek]
+    [activeReplay, seek]
   );
 
   const handleSelectGame = useCallback((gameId: string) => {
     setSelectedGameId(gameId);
   }, []);
+
+  const handleModeChange = useCallback((nextMode: UiMode) => {
+    setMode(nextMode);
+    setCurrentIndex(0);
+    setIsPlaying(false);
+  }, []);
+
+  const handleAnalyzeCustomPgn = useCallback(async () => {
+    const pgnText = customPgnText.trim();
+    if (!pgnText) {
+      setCustomError("Paste a PGN before starting analysis.");
+      return;
+    }
+
+    setMode("pgn");
+    setCustomLoading(true);
+    setCustomError(null);
+    setCustomReplay(null);
+    setCurrentIndex(0);
+    setIsPlaying(false);
+
+    const body: AnalyzePgnReplayRequest = {
+      pgn_text: pgnText,
+      eval_depth: 6,
+      prediction_depth: 8,
+      checkpoint_moves: [15, 20, 25, 30, 35],
+      max_plies: 90,
+    };
+
+    try {
+      const result = await api.analyzePgnReplay(body);
+      setCustomReplay(result);
+    } catch (error) {
+      setCustomError(
+        error instanceof Error
+          ? error.message
+          : "The backend could not analyze this PGN. Check headers, clocks, and game rules."
+      );
+    } finally {
+      setCustomLoading(false);
+    }
+  }, [customPgnText]);
 
   return (
     <main className="min-h-screen overflow-hidden bg-page text-ivory">
@@ -225,8 +289,8 @@ export default function Home() {
             />
             <MetricCard
               label="Endpoints"
-              value="/replay + /live"
-              detail="Replay PGNs or evaluate a live board position."
+              value="3 modes"
+              detail="Bundled replay, custom PGN replay, and live board evaluation."
               icon={Gauge}
               tone="gold"
             />
@@ -242,18 +306,27 @@ export default function Home() {
 
         <StatusBanner health={health} loading={healthLoading} error={backendError} />
 
-        <section className="panel flex flex-col gap-3 border border-white/10 p-2 sm:flex-row">
+        <section className="panel grid gap-3 border border-white/10 p-2 md:grid-cols-3">
           <ModeButton
-            active={mode === "replay"}
-            title="Replay Mode"
+            active={mode === "demo"}
+            title="Demo Replay"
             detail="Inspect bundled PGNs ply by ply"
-            onClick={() => setMode("replay")}
+            icon={Database}
+            onClick={() => handleModeChange("demo")}
+          />
+          <ModeButton
+            active={mode === "pgn"}
+            title="Paste PGN"
+            detail="Analyze a qualifying custom game"
+            icon={ClipboardPaste}
+            onClick={() => handleModeChange("pgn")}
           />
           <ModeButton
             active={mode === "live"}
-            title="Live Board Mode"
+            title="Live Board"
             detail="Play legal moves and evaluate the current board"
-            onClick={() => setMode("live")}
+            icon={Gamepad2}
+            onClick={() => handleModeChange("live")}
           />
         </section>
 
@@ -261,139 +334,83 @@ export default function Home() {
           <LiveBoardMode />
         ) : (
           <section className="grid gap-6 xl:grid-cols-[360px_minmax(0,1fr)_380px]">
-          <aside className="space-y-6">
-            <GameSelector
-              games={games}
-              selectedId={selectedGameId}
-              loading={gamesLoading}
-              disabled={Boolean(gamesError)}
-              onSelect={handleSelectGame}
-            />
-
-            <div className="panel border border-white/10 p-5">
-              <p className="font-mono text-[0.66rem] uppercase tracking-[0.22em] text-gold">
-                Game metadata
-              </p>
-              {replay ? (
-                <div className="mt-4 grid gap-3">
-                  <MetricCard
-                    label="White Elo"
-                    value={replay.metadata.white_elo}
-                    detail={replay.metadata.white ?? "White"}
-                    icon={User}
-                    tone={replay.metadata.higher_rated_color === "white" ? "gold" : "muted"}
-                  />
-                  <MetricCard
-                    label="Black Elo"
-                    value={replay.metadata.black_elo}
-                    detail={replay.metadata.black ?? "Black"}
-                    icon={User}
-                    tone={replay.metadata.higher_rated_color === "black" ? "gold" : "muted"}
-                  />
-                  <MetricCard
-                    label="Rating gap"
-                    value={`${replay.metadata.rating_gap} pts`}
-                    detail={`Lower-rated: ${replay.metadata.lower_rated_color}`}
-                    icon={Crown}
-                    tone="ivory"
-                  />
-                  <MetricCard
-                    label="Actual result"
-                    value={replay.metadata.result}
-                    detail={
-                      replay.metadata.actual_upset_label === 1
-                        ? "Actual upset occurred"
-                        : "Higher-rated player won"
-                    }
-                    icon={Trophy}
-                    tone={replay.metadata.actual_upset_label === 1 ? "red" : "green"}
-                  />
-                  <MetricCard
-                    label="Eval depth"
-                    value={replay.summary.eval_depth}
-                    detail={`Prediction depth ${replay.summary.prediction_depth}`}
-                    icon={Gauge}
-                    tone="gold"
-                  />
-                  <MetricCard
-                    label="Actual upset"
-                    value={replay.metadata.actual_upset_label}
-                    detail="1 means the lower-rated player won."
-                    icon={BadgeCheck}
-                    tone={replay.metadata.actual_upset_label === 1 ? "red" : "green"}
-                  />
-                </div>
+            <aside className="space-y-6">
+              {mode === "demo" ? (
+                <GameSelector
+                  games={games}
+                  selectedId={selectedGameId}
+                  loading={gamesLoading}
+                  disabled={Boolean(gamesError)}
+                  onSelect={handleSelectGame}
+                />
               ) : (
-                <p className="mt-4 text-sm leading-6 text-stone-500">
-                  {selectedGame
-                    ? "Replay metadata will appear after analysis loads."
-                    : "Select a bundled PGN to begin."}
-                </p>
+                <CustomPgnPanel
+                  value={customPgnText}
+                  loading={customLoading}
+                  error={customError}
+                  hasReplay={Boolean(customReplay)}
+                  onChange={setCustomPgnText}
+                  onAnalyze={handleAnalyzeCustomPgn}
+                />
               )}
-            </div>
-          </aside>
 
-          <section className="space-y-6">
-            {replayLoading ? (
-              <div className="panel flex min-h-[620px] items-center justify-center border border-white/10">
-                <div className="text-center">
-                  <div className="mx-auto mb-4 h-11 w-11 animate-spin rounded-full border-2 border-gold border-t-transparent" />
-                  <p className="font-semibold text-ivory">Loading interactive replay</p>
-                  <p className="mt-2 text-sm text-stone-500">
-                    Fetching FENs, clocks, Stockfish evals, and checkpoint predictions.
-                  </p>
-                </div>
-              </div>
-            ) : replayError ? (
-              <div className="panel flex min-h-[520px] items-center justify-center border border-red-400/25 bg-red-400/[0.05] p-8">
-                <div className="max-w-xl text-center">
-                  <p className="font-mono text-[0.66rem] uppercase tracking-[0.22em] text-red-300">
-                    Replay unavailable
-                  </p>
-                  <h2 className="mt-3 text-2xl font-semibold text-ivory">
-                    The backend could not analyze this game
-                  </h2>
-                  <p className="mt-3 text-sm leading-6 text-stone-400">{replayError}</p>
-                </div>
-              </div>
-            ) : (
-              <>
-                <ChessReplayBoard move={currentMove} metadata={replay?.metadata ?? null} />
-                <ReplayControls
-                  currentIndex={currentIndex}
-                  maxIndex={maxIndex}
-                  isPlaying={isPlaying}
-                  onFirst={() => seek(0)}
-                  onPrevious={() => seek(currentIndex - 1)}
-                  onNext={() => seek(currentIndex + 1)}
-                  onLast={() => seek(maxIndex)}
-                  onTogglePlay={() => setIsPlaying((playing) => !playing)}
-                  onSeek={seek}
-                />
-                <CheckpointTimeline
-                  checkpoints={replay?.checkpoints ?? []}
-                  currentPly={currentMove?.ply ?? 0}
-                  onSelectPly={seekPly}
-                />
-              </>
-            )}
+              <MetadataPanel
+                replay={activeReplay}
+                fallback={
+                  mode === "demo"
+                    ? selectedGame
+                      ? "Replay metadata will appear after analysis loads."
+                      : "Select a bundled PGN to begin."
+                    : "Paste a qualifying PGN, then run analysis to populate metadata."
+                }
+              />
+            </aside>
+
+            <section className="space-y-6">
+              {activeLoading ? (
+                <ReplaySkeleton source={replaySourceLabel} />
+              ) : activeError ? (
+                <ReplayError message={activeError} mode={mode} />
+              ) : activeReplay ? (
+                <>
+                  <ChessReplayBoard move={currentMove} metadata={activeReplay.metadata} />
+                  <ReplayControls
+                    currentIndex={currentIndex}
+                    maxIndex={maxIndex}
+                    isPlaying={isPlaying}
+                    onFirst={() => seek(0)}
+                    onPrevious={() => seek(currentIndex - 1)}
+                    onNext={() => seek(currentIndex + 1)}
+                    onLast={() => seek(maxIndex)}
+                    onTogglePlay={() => setIsPlaying((playing) => !playing)}
+                    onSeek={seek}
+                  />
+                  <CheckpointTimeline
+                    checkpoints={activeReplay.checkpoints}
+                    currentPly={currentMove?.ply ?? 0}
+                    onSelectPly={seekPly}
+                  />
+                </>
+              ) : (
+                <ReplayEmpty mode={mode} />
+              )}
+            </section>
+
+            <aside className="space-y-6">
+              <EvalBar move={currentMove} />
+              <PlyShockBar
+                currentMove={currentMove}
+                latestCheckpoint={latestCheckpoint}
+                latestPrediction={latestPrediction}
+                metadata={activeReplay?.metadata ?? null}
+              />
+              <MoveList
+                moves={activeReplay?.moves ?? []}
+                currentPly={currentMove?.ply ?? 0}
+                onSelectPly={seekPly}
+              />
+            </aside>
           </section>
-
-          <aside className="space-y-6">
-            <EvalBar move={currentMove} />
-            <PlyShockBar
-              currentMove={currentMove}
-              latestCheckpoint={latestCheckpoint}
-              latestPrediction={latestPrediction}
-              metadata={replay?.metadata ?? null}
-            />
-            <MoveList
-              moves={replay?.moves ?? []}
-              currentPly={currentMove?.ply ?? 0}
-              onSelectPly={seekPly}
-            />
-          </aside>
-        </section>
         )}
 
         <ResearchSummary />
@@ -402,15 +419,141 @@ export default function Home() {
   );
 }
 
+function MetadataPanel({ replay, fallback }: { replay: ReplayResponse | null; fallback: string }) {
+  return (
+    <div className="panel border border-white/10 p-5">
+      <p className="font-mono text-[0.66rem] uppercase tracking-[0.22em] text-gold">
+        Game metadata
+      </p>
+      {replay ? (
+        <div className="mt-4 grid gap-3">
+          <MetricCard
+            label="White Elo"
+            value={replay.metadata.white_elo}
+            detail={replay.metadata.white ?? "White"}
+            icon={User}
+            tone={replay.metadata.higher_rated_color === "white" ? "gold" : "muted"}
+          />
+          <MetricCard
+            label="Black Elo"
+            value={replay.metadata.black_elo}
+            detail={replay.metadata.black ?? "Black"}
+            icon={User}
+            tone={replay.metadata.higher_rated_color === "black" ? "gold" : "muted"}
+          />
+          <MetricCard
+            label="Rating gap"
+            value={`${replay.metadata.rating_gap} pts`}
+            detail={`Lower-rated: ${replay.metadata.lower_rated_color}`}
+            icon={Crown}
+            tone="ivory"
+          />
+          <MetricCard
+            label="Actual result"
+            value={replay.metadata.result}
+            detail={
+              replay.metadata.actual_upset_label === 1
+                ? "Actual upset occurred"
+                : "Higher-rated player won"
+            }
+            icon={Trophy}
+            tone={replay.metadata.actual_upset_label === 1 ? "red" : "green"}
+          />
+          <MetricCard
+            label="Eval depth"
+            value={replay.summary.eval_depth}
+            detail={`Prediction depth ${replay.summary.prediction_depth}`}
+            icon={Gauge}
+            tone="gold"
+          />
+          <MetricCard
+            label="Actual upset"
+            value={replay.metadata.actual_upset_label}
+            detail="1 means the lower-rated player won."
+            icon={BadgeCheck}
+            tone={replay.metadata.actual_upset_label === 1 ? "red" : "green"}
+          />
+        </div>
+      ) : (
+        <p className="mt-4 text-sm leading-6 text-stone-500">{fallback}</p>
+      )}
+    </div>
+  );
+}
+
+function ReplaySkeleton({ source }: { source: string }) {
+  return (
+    <div className="panel min-h-[620px] border border-white/10 p-6">
+      <div className="flex h-full min-h-[560px] flex-col justify-between">
+        <div>
+          <div className="h-4 w-40 animate-pulse rounded-full bg-gold/20" />
+          <div className="mt-4 h-8 w-72 animate-pulse rounded-full bg-white/[0.08]" />
+        </div>
+        <div className="mx-auto aspect-square w-full max-w-[620px] animate-pulse rounded-3xl border border-gold/10 bg-[linear-gradient(110deg,rgba(255,255,255,0.035),rgba(212,175,55,0.11),rgba(255,255,255,0.035))] bg-[length:220%_100%]" />
+        <div className="text-center">
+          <div className="mx-auto mb-4 h-11 w-11 animate-spin rounded-full border-2 border-gold border-t-transparent" />
+          <p className="font-semibold text-ivory">Loading interactive replay</p>
+          <p className="mt-2 text-sm text-stone-500">
+            Analyzing {source}: FENs, clocks, Stockfish evals, and checkpoint predictions.
+          </p>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+function ReplayError({ message, mode }: { message: string; mode: UiMode }) {
+  return (
+    <div className="panel flex min-h-[520px] items-center justify-center border border-red-400/25 bg-red-400/[0.05] p-8">
+      <div className="max-w-xl text-center">
+        <p className="font-mono text-[0.66rem] uppercase tracking-[0.22em] text-red-300">
+          {mode === "pgn" ? "PGN validation failed" : "Replay unavailable"}
+        </p>
+        <h2 className="mt-3 text-2xl font-semibold text-ivory">
+          The backend could not analyze this game
+        </h2>
+        <p className="mt-3 text-sm leading-6 text-stone-400">{message}</p>
+        {mode === "pgn" ? (
+          <p className="mt-4 rounded-2xl border border-white/10 bg-black/25 p-3 text-xs leading-5 text-stone-500">
+            Custom PGNs need Elo headers, decisive result data, a sufficient rating gap, and clock
+            comments so PlyShock can build the same human-centric features used in training.
+          </p>
+        ) : null}
+      </div>
+    </div>
+  );
+}
+
+function ReplayEmpty({ mode }: { mode: UiMode }) {
+  return (
+    <div className="panel flex min-h-[560px] items-center justify-center border border-white/10 bg-white/[0.025] p-8">
+      <div className="max-w-xl text-center">
+        <p className="font-mono text-[0.66rem] uppercase tracking-[0.22em] text-gold">
+          Ready for analysis
+        </p>
+        <h2 className="mt-3 text-2xl font-semibold text-ivory">
+          {mode === "pgn" ? "Paste a PGN to generate a replay" : "Select a demo game to begin"}
+        </h2>
+        <p className="mt-3 text-sm leading-6 text-stone-400">
+          Stockfish evaluation updates every move. PlyShock prediction activates at trained
+          checkpoint moves and reports an upset probability estimate.
+        </p>
+      </div>
+    </div>
+  );
+}
+
 function ModeButton({
   active,
   title,
   detail,
+  icon: Icon,
   onClick,
 }: {
   active: boolean;
   title: string;
   detail: string;
+  icon: typeof Database;
   onClick: () => void;
 }) {
   return (
@@ -423,7 +566,10 @@ function ModeButton({
           : "flex-1 rounded-2xl border border-white/10 bg-white/[0.03] px-4 py-3 text-left text-stone-400 transition hover:border-gold/30 hover:text-ivory"
       }
     >
-      <span className="block text-sm font-semibold">{title}</span>
+      <span className="flex items-center gap-2 text-sm font-semibold">
+        <Icon size={16} />
+        {title}
+      </span>
       <span className="mt-1 block text-xs text-stone-500">{detail}</span>
     </button>
   );

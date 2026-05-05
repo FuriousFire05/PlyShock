@@ -8,7 +8,7 @@ export function ResearchSummary() {
       <div className="flex flex-wrap items-end justify-between gap-4">
         <div>
           <p className="font-mono text-[0.66rem] uppercase tracking-[0.22em] text-gold">
-            Research grounding
+            Research backbone
           </p>
           <h2 className="mt-2 text-2xl font-semibold text-ivory">
             Dynamic Upset Prediction in Chess

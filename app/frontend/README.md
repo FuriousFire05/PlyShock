@@ -1,10 +1,10 @@
 # PlyShock Frontend
 
-Interactive Next.js replay lab for PlyShock.
+Premium Next.js chess analytics demo for PlyShock.
 
 ## Run
 
-Start the backend from the repository root:
+Start the FastAPI backend from the repository root:
 
 ```bash
 uv run uvicorn app.backend.main:app --reload
@@ -27,13 +27,17 @@ The frontend reads the backend base URL from:
 NEXT_PUBLIC_API_BASE_URL=http://127.0.0.1:8000
 ```
 
-If unset, it falls back to `http://127.0.0.1:8000`.
+If unset, it falls back to `http://127.0.0.1:8000`. No API keys, auth, or cloud services are required.
 
-The app uses:
+## Supported Modes
 
-- `GET /health`
-- `GET /demo-games`
-- `GET /demo-games/{game_id}/replay`
+- Demo Replay: select a bundled PGN from `GET /demo-games`, then load move-by-move replay data from `GET /demo-games/{game_id}/replay`.
+- Paste PGN: paste a custom PGN and analyze it with `POST /analyze-pgn-replay`.
+- Live Board: play legal moves on the board and evaluate the current position with `POST /live/evaluate`.
+
+Custom PGNs must include Elo headers and clock comments for full PlyShock analysis. The backend may reject games that do not satisfy the project rules used by the trained model.
+
+Stockfish evaluation updates every move. PlyShock prediction activates only at trained checkpoint moves and should be read as an upset probability estimate.
 
 ## Checks
 

@@ -13,6 +13,13 @@ export interface DemoGame {
   id: string;
   filename: string;
   path: string;
+  label?: string;
+  white_elo?: number | null;
+  black_elo?: number | null;
+  result?: string | null;
+  rating_gap?: number | null;
+  lower_rated_color?: PlayerColor | null;
+  actual_upset_label?: number | null;
 }
 
 export interface ReplayMetadata {
@@ -77,6 +84,14 @@ export interface ReplayResponse {
   moves: ReplayMove[];
   checkpoints: ReplayCheckpoint[];
   summary: ReplaySummary;
+}
+
+export interface AnalyzePgnReplayRequest {
+  pgn_text: string;
+  eval_depth: number;
+  prediction_depth: number;
+  checkpoint_moves: number[];
+  max_plies: number;
 }
 
 export interface LiveCheckpointHistoryItem {
