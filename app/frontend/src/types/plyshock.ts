@@ -78,3 +78,52 @@ export interface ReplayResponse {
   checkpoints: ReplayCheckpoint[];
   summary: ReplaySummary;
 }
+
+export interface LiveCheckpointHistoryItem {
+  checkpoint_move: number;
+  eval_cp_lower_pov: number;
+}
+
+export interface LiveEvaluateRequest {
+  fen: string;
+  white_elo: number;
+  black_elo: number;
+  white_clock_sec: number;
+  black_clock_sec: number;
+  initial_time_sec: number;
+  increment_sec: number;
+  fullmove_number: number;
+  ply: number;
+  checkpoint_history: LiveCheckpointHistoryItem[];
+  eval_depth: number;
+  prediction_depth: number;
+}
+
+export interface LivePlyShockPrediction {
+  upset_probability: number | null;
+  predicted_label: 0 | 1;
+  interpretation: string;
+  eval_cp_lower_pov: number;
+  lower_is_better_by_engine: boolean;
+}
+
+export interface LiveEvaluateResponse {
+  stockfish_eval_cp_white_pov: number;
+  stockfish_bar: number;
+  lower_rated_color: PlayerColor;
+  higher_rated_color: PlayerColor;
+  rating_gap: number;
+  lower_clock_sec: number | null;
+  higher_clock_sec: number | null;
+  is_checkpoint: boolean;
+  checkpoint_move: number | null;
+  plyshock: LivePlyShockPrediction | null;
+}
+
+export interface LiveMoveRecord {
+  ply: number;
+  fullmove: number;
+  san: string;
+  uci: string;
+  is_checkpoint: boolean;
+}

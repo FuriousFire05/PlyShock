@@ -7,6 +7,7 @@ import { ChessReplayBoard } from "@/components/ChessReplayBoard";
 import { CheckpointTimeline } from "@/components/CheckpointTimeline";
 import { EvalBar } from "@/components/EvalBar";
 import { GameSelector } from "@/components/GameSelector";
+import { LiveBoardMode } from "@/components/LiveBoardMode";
 import { MetricCard } from "@/components/MetricCard";
 import { MoveList } from "@/components/MoveList";
 import { PlyShockBar } from "@/components/PlyShockBar";
@@ -21,6 +22,8 @@ import type {
   ReplayCheckpoint,
   ReplayResponse,
 } from "@/types/plyshock";
+
+type UiMode = "replay" | "live";
 
 export default function Home() {
   const [health, setHealth] = useState<BackendHealth | null>(null);
@@ -37,6 +40,7 @@ export default function Home() {
   const [replayError, setReplayError] = useState<string | null>(null);
   const [currentIndex, setCurrentIndex] = useState(0);
   const [isPlaying, setIsPlaying] = useState(false);
+  const [mode, setMode] = useState<UiMode>("replay");
 
   useEffect(() => {
     let cancelled = false;
@@ -220,9 +224,9 @@ export default function Home() {
               tone={health ? "green" : "red"}
             />
             <MetricCard
-              label="Replay endpoint"
-              value="/replay"
-              detail="Move-by-move FEN, clock, eval, and checkpoint predictions."
+              label="Endpoints"
+              value="/replay + /live"
+              detail="Replay PGNs or evaluate a live board position."
               icon={Gauge}
               tone="gold"
             />
@@ -238,7 +242,25 @@ export default function Home() {
 
         <StatusBanner health={health} loading={healthLoading} error={backendError} />
 
-        <section className="grid gap-6 xl:grid-cols-[360px_minmax(0,1fr)_380px]">
+        <section className="panel flex flex-col gap-3 border border-white/10 p-2 sm:flex-row">
+          <ModeButton
+            active={mode === "replay"}
+            title="Replay Mode"
+            detail="Inspect bundled PGNs ply by ply"
+            onClick={() => setMode("replay")}
+          />
+          <ModeButton
+            active={mode === "live"}
+            title="Live Board Mode"
+            detail="Play legal moves and evaluate the current board"
+            onClick={() => setMode("live")}
+          />
+        </section>
+
+        {mode === "live" ? (
+          <LiveBoardMode />
+        ) : (
+          <section className="grid gap-6 xl:grid-cols-[360px_minmax(0,1fr)_380px]">
           <aside className="space-y-6">
             <GameSelector
               games={games}
@@ -372,9 +394,37 @@ export default function Home() {
             />
           </aside>
         </section>
+        )}
 
         <ResearchSummary />
       </div>
     </main>
+  );
+}
+
+function ModeButton({
+  active,
+  title,
+  detail,
+  onClick,
+}: {
+  active: boolean;
+  title: string;
+  detail: string;
+  onClick: () => void;
+}) {
+  return (
+    <button
+      type="button"
+      onClick={onClick}
+      className={
+        active
+          ? "flex-1 rounded-2xl border border-gold/45 bg-gold/15 px-4 py-3 text-left text-ivory shadow-[0_0_28px_rgba(212,175,55,0.12)]"
+          : "flex-1 rounded-2xl border border-white/10 bg-white/[0.03] px-4 py-3 text-left text-stone-400 transition hover:border-gold/30 hover:text-ivory"
+      }
+    >
+      <span className="block text-sm font-semibold">{title}</span>
+      <span className="mt-1 block text-xs text-stone-500">{detail}</span>
+    </button>
   );
 }

@@ -1,4 +1,10 @@
-import type { BackendHealth, DemoGame, ReplayResponse } from "@/types/plyshock";
+import type {
+  BackendHealth,
+  DemoGame,
+  LiveEvaluateRequest,
+  LiveEvaluateResponse,
+  ReplayResponse,
+} from "@/types/plyshock";
 
 export const API_BASE_URL =
   process.env.NEXT_PUBLIC_API_BASE_URL?.replace(/\/$/, "") ?? "http://127.0.0.1:8000";
@@ -26,9 +32,37 @@ async function fetchJson<T>(path: string): Promise<T> {
   return response.json() as Promise<T>;
 }
 
+async function postJson<TResponse, TBody>(path: string, body: TBody): Promise<TResponse> {
+  const response = await fetch(`${API_BASE_URL}${path}`, {
+    method: "POST",
+    headers: {
+      Accept: "application/json",
+      "Content-Type": "application/json",
+    },
+    body: JSON.stringify(body),
+  });
+
+  if (!response.ok) {
+    let message = `${response.status} ${response.statusText}`;
+    try {
+      const bodyJson = (await response.json()) as { detail?: unknown };
+      if (typeof bodyJson.detail === "string") {
+        message = bodyJson.detail;
+      }
+    } catch {
+      // Keep the HTTP status text if the backend did not return JSON.
+    }
+    throw new Error(message);
+  }
+
+  return response.json() as Promise<TResponse>;
+}
+
 export const api = {
   health: () => fetchJson<BackendHealth>("/health"),
   demoGames: () => fetchJson<DemoGame[]>("/demo-games"),
   replay: (gameId: string) =>
     fetchJson<ReplayResponse>(`/demo-games/${encodeURIComponent(gameId)}/replay`),
+  liveEvaluate: (body: LiveEvaluateRequest) =>
+    postJson<LiveEvaluateResponse, LiveEvaluateRequest>("/live/evaluate", body),
 };
