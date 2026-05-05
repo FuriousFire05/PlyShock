@@ -16,7 +16,7 @@ export function GameSelector({ games, selectedId, loading, disabled, onSelect }:
   return (
     <section className="panel border border-white/10 p-5">
       <div className="mb-4 flex items-center justify-between gap-4">
-        <div>
+        <div className="min-w-0">
           <p className="font-mono text-[0.66rem] uppercase tracking-[0.22em] text-gold">
             Demo PGNs
           </p>
@@ -30,7 +30,7 @@ export function GameSelector({ games, selectedId, loading, disabled, onSelect }:
           value={selectedId ?? ""}
           disabled={disabled || loading || games.length === 0}
           onChange={(event) => onSelect(event.target.value)}
-          className="h-12 w-full appearance-none rounded-xl border border-white/10 bg-black/35 px-4 pr-11 text-sm text-ivory outline-none transition focus:border-gold/60 focus:ring-2 focus:ring-gold/15 disabled:cursor-not-allowed disabled:opacity-50"
+          className="h-12 w-full truncate appearance-none overflow-hidden whitespace-nowrap rounded-xl border border-white/10 bg-black/35 px-4 pr-11 text-sm text-ivory outline-none transition focus:border-gold/60 focus:ring-2 focus:ring-gold/15 disabled:cursor-not-allowed disabled:opacity-50"
         >
           <option value="" disabled>
             {loading ? "Loading games..." : games.length ? "Choose a demo game" : "No games found"}
@@ -48,12 +48,25 @@ export function GameSelector({ games, selectedId, loading, disabled, onSelect }:
       </label>
 
       {selectedGame ? (
-        <div className="mt-4 grid gap-2 rounded-2xl border border-white/10 bg-white/[0.035] p-3">
-          <div className="flex items-center justify-between gap-3">
-            <p className="truncate text-sm font-semibold text-ivory">{formatGameLabel(selectedGame)}</p>
+        <div className="mt-4 grid min-w-0 gap-3 rounded-2xl border border-white/10 bg-white/[0.035] p-3">
+          <div className="flex min-w-0 items-start justify-between gap-3">
+            <div className="min-w-0 flex-1 overflow-hidden">
+              <p
+                className="truncate whitespace-nowrap text-sm font-semibold text-ivory"
+                title={formatGameLabel(selectedGame)}
+              >
+                {formatPrimaryLabel(selectedGame)}
+              </p>
+              <p
+                className="mt-1 truncate whitespace-nowrap text-xs text-stone-500"
+                title={formatGameSubline(selectedGame)}
+              >
+                {formatGameSubline(selectedGame)}
+              </p>
+            </div>
             <UpsetBadge value={selectedGame.actual_upset_label} />
           </div>
-          <div className="grid grid-cols-3 gap-2 text-xs text-stone-400">
+          <div className="grid min-w-0 grid-cols-3 gap-2 text-xs text-stone-400">
             <Mini label="Gap" value={formatOptional(selectedGame.rating_gap, "pts")} />
             <Mini label="Result" value={selectedGame.result ?? "--"} />
             <Mini label="Lower" value={selectedGame.lower_rated_color ?? "--"} />
@@ -79,6 +92,26 @@ function formatGameLabel(game: DemoGame) {
   return `${game.filename}${ratings}`;
 }
 
+function formatPrimaryLabel(game: DemoGame) {
+  return formatGameLabel(game)
+    .replace(/\s+\((1-0|0-1|1\/2-1\/2|\*)\)$/u, "")
+    .trim();
+}
+
+function formatGameSubline(game: DemoGame) {
+  const parts = [game.id || game.filename];
+  if (game.filename && game.filename !== game.id) {
+    parts.push(game.filename);
+  }
+  if (game.rating_gap !== null && game.rating_gap !== undefined) {
+    parts.push(`${game.rating_gap} pt gap`);
+  }
+  if (game.result) {
+    parts.push(`result ${game.result}`);
+  }
+  return parts.join(" / ");
+}
+
 function formatOptional(value: number | null | undefined, suffix = "") {
   if (value === null || value === undefined || Number.isNaN(value)) {
     return "--";
@@ -88,9 +121,11 @@ function formatOptional(value: number | null | undefined, suffix = "") {
 
 function Mini({ label, value }: { label: string; value: string }) {
   return (
-    <div className="rounded-xl border border-white/5 bg-black/20 p-2">
+    <div className="min-w-0 rounded-xl border border-white/5 bg-black/20 p-2">
       <p className="font-mono text-[0.58rem] uppercase tracking-[0.14em] text-stone-600">{label}</p>
-      <p className="mt-1 truncate font-semibold text-stone-300">{value}</p>
+      <p className="mt-1 truncate overflow-hidden whitespace-nowrap font-semibold text-stone-300">
+        {value}
+      </p>
     </div>
   );
 }
