@@ -495,6 +495,3 @@ The reported results are based on a sampled subset of Lichess games and should b
 ## Author
 
 Created by [FuriousFire](https://github.com/FuriousFire05)
-
----
-
