@@ -18,12 +18,12 @@ The project uses real Lichess PGN `.zst` data, extracts mid-game snapshots, eval
 
 Chess results are strongly influenced by player ratings, but lower-rated players still defeat higher-rated opponents under certain dynamic game conditions. These upsets may be linked to mid-game factors such as:
 
-- rating mismatch,
-- clock pressure,
-- engine evaluation,
-- positional instability,
-- evaluation swings,
-- and interaction effects between rating, time, and position.
+- rating mismatch
+- clock pressure
+- engine evaluation
+- positional instability
+- evaluation swings
+- interaction effects between rating, time, and position
 
 PlyShock studies whether these mid-game signals can help predict upset outcomes more effectively than rating-only baselines.
 
@@ -55,13 +55,13 @@ The raw `.pgn.zst` file is **not committed** to this repository because of its l
 
 A game is accepted only if it satisfies the project rules:
 
-- decisive result only: `1-0` or `0-1`,
-- valid WhiteElo and BlackElo,
-- rating gap of at least 100,
-- valid time control,
-- available clock comments,
-- reaches at least move 15,
-- parseable legal move sequence.
+- decisive result only: `1-0` or `0-1`
+- valid `WhiteElo` and `BlackElo`
+- rating gap of at least 100
+- valid time control
+- available clock comments
+- reaches at least move 15
+- parseable legal move sequence
 
 The target label is:
 
@@ -108,41 +108,41 @@ This creates multiple snapshot rows per game while preserving the same final ups
 
 ## Feature Families
 
-The final feature dataset contains 26 model input features grouped into:
+The final feature dataset contains 26 model input features grouped into the following families.
 
 ### Rating Features
 
-- rating gap,
-- lower-rated player color.
+- rating gap
+- lower-rated player color
 
 ### Clock Features
 
-- lower-rated player remaining time,
-- higher-rated player remaining time,
-- clock difference,
-- clock ratios,
-- time-pressure flags.
+- lower-rated player remaining time
+- higher-rated player remaining time
+- clock difference
+- clock ratios
+- time-pressure flags
 
 ### Engine Evaluation Features
 
-- Stockfish centipawn evaluation,
-- evaluation from lower-rated player perspective,
-- absolute evaluation,
-- lower-rated player better/worse flag,
-- mate flag.
+- Stockfish centipawn evaluation
+- evaluation from lower-rated player perspective
+- absolute evaluation
+- lower-rated player better/worse flag
+- mate flag
 
 ### Instability Features
 
-- evaluation delta from previous snapshot,
-- trend from first snapshot,
-- volatility so far,
-- large evaluation swing flag.
+- evaluation delta from previous snapshot
+- trend from first snapshot
+- volatility so far
+- large evaluation swing flag
 
 ### Interaction Features
 
-- rating gap × lower-rated evaluation,
-- time pressure × evaluation volatility,
-- lower-rated player worse while higher-rated player is under pressure.
+- rating gap × lower-rated evaluation
+- time pressure × evaluation volatility
+- lower-rated player worse while higher-rated player is under pressure
 
 Leakage-prone fields such as result, winner color, final fullmove number, FEN, game ID, and time-control string are not used as model inputs.
 
@@ -163,7 +163,7 @@ Average rating gap: 224.50
 Upset rate decreased as the rating gap increased:
 
 | Rating Gap Bucket | Upset Rate |
-|---|---:|
+| --- | ---: |
 | 100–199 | 36.46% |
 | 200–399 | 24.47% |
 | 400–799 | 14.19% |
@@ -211,7 +211,7 @@ Feature count: 26
 ```
 
 | Model | Accuracy | Precision | Recall | F1 | ROC-AUC |
-|---|---:|---:|---:|---:|---:|
+| --- | ---: | ---: | ---: | ---: | ---: |
 | Decision Tree | 0.698 | 0.542 | 0.500 | 0.520 | 0.647 |
 | KNN | 0.729 | 0.607 | 0.477 | 0.535 | 0.729 |
 | Naive Bayes | 0.707 | 0.559 | 0.482 | 0.517 | 0.727 |
@@ -229,7 +229,7 @@ Random Forest achieved the highest accuracy, precision, and ROC-AUC, while SVM a
 The ablation study compares the full feature set against simpler baselines.
 
 | Feature Set | Accuracy | F1 | ROC-AUC |
-|---|---:|---:|
+| --- | ---: | ---: | ---: |
 | Majority Baseline | 0.673 | 0.000 | N/A |
 | Rating Only | 0.552 | 0.463 | 0.586 |
 | Rating + Clock | 0.696 | 0.408 | 0.698 |
@@ -396,13 +396,13 @@ uv run python -m plyshock.pipelines.run_ablation \
 
 The following files are intentionally not committed:
 
-- raw Lichess `.pgn.zst` dumps,
-- interim parquet datasets,
-- processed parquet datasets,
-- Stockfish binary,
-- trained `.joblib` models,
-- local virtual environments,
-- local editor settings.
+- raw Lichess `.pgn.zst` dumps
+- interim parquet datasets
+- processed parquet datasets
+- Stockfish binary
+- trained `.joblib` models
+- local virtual environments
+- local editor settings
 
 This keeps the repository lightweight and reproducible.
 
