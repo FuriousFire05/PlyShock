@@ -263,30 +263,34 @@ The strongest performance jump comes from combining rating, clock, and engine-ev
 
 ```text
 PlyShock/
-├── docs/
-│   └── research/
-│       └── literature-notes.md
-├── research/
-│   ├── artifacts/
-│   │   ├── metrics/
-│   │   └── plots/
-│   ├── data/
-│   │   ├── raw/
-│   │   ├── interim/
-│   │   ├── processed/
-│   │   └── samples/
-│   ├── src/
-│   │   └── plyshock/
-│   │       ├── engine/
-│   │       ├── evaluation/
-│   │       ├── features/
-│   │       ├── parsing/
-│   │       ├── pipelines/
-│   │       └── training/
-│   └── tests/
-├── pyproject.toml
-├── uv.lock
-└── README.md
+|-- app/
+|   |-- backend/
+|   `-- frontend/
+|-- docs/
+|   `-- research/
+|       `-- literature-notes.md
+|-- research/
+|   |-- artifacts/
+|   |   |-- metrics/
+|   |   `-- plots/
+|   |-- data/
+|   |   |-- raw/
+|   |   |-- interim/
+|   |   |-- processed/
+|   |   `-- samples/
+|   |-- src/
+|   |   `-- plyshock/
+|   |       |-- engine/
+|   |       |-- evaluation/
+|   |       |-- features/
+|   |       |-- parsing/
+|   |       |-- pipelines/
+|   |       `-- training/
+|   `-- tests/
+|-- docker-compose.yml
+|-- pyproject.toml
+|-- uv.lock
+`-- README.md
 ```
 
 ---
@@ -460,7 +464,7 @@ This keeps the repository lightweight and reproducible.
 
 ## Current Status
 
-The research pipeline is complete through model evaluation:
+The research pipeline and local demo app are complete through:
 
 ```text
 Parser ✅
@@ -472,6 +476,12 @@ Feature engineering ✅
 Model training ✅
 Ablation study ✅
 Evaluation plots ✅
+FastAPI backend ✅
+Next.js frontend ✅
+Docker packaging ✅
+Demo replay mode ✅
+Paste/custom PGN mode ✅
+Live board mode ✅
 ```
 
 Planned next stages:
@@ -479,9 +489,7 @@ Planned next stages:
 ```text
 Final report writing
 Presentation / viva preparation
-FastAPI demo backend
-Next.js dashboard frontend
-Docker packaging
+Optional cloud deployment
 ```
 
 ---

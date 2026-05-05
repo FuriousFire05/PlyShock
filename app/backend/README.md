@@ -57,19 +57,19 @@ curl http://127.0.0.1:8000/demo-games
 Fetch one bundled PGN:
 
 ```bash
-curl http://127.0.0.1:8000/demo-games/sample
+curl http://127.0.0.1:8000/demo-games/demo_game_1
 ```
 
 Analyze one bundled PGN:
 
 ```bash
-curl http://127.0.0.1:8000/demo-games/sample/analysis
+curl http://127.0.0.1:8000/demo-games/demo_game_1/analysis
 ```
 
 Analyze one bundled PGN with full move replay:
 
 ```bash
-curl "http://127.0.0.1:8000/demo-games/sample/replay?eval_depth=6&prediction_depth=8&max_plies=90"
+curl "http://127.0.0.1:8000/demo-games/demo_game_1/replay?eval_depth=6&prediction_depth=8&max_plies=90"
 ```
 
 Replay responses include:
